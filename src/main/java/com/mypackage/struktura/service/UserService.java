@@ -1,10 +1,13 @@
 package com.mypackage.struktura.service;
 
 import com.mypackage.struktura.model.entity.User;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
 public interface UserService {
+
+    User getUserById(Long id);
 
     User registerUser(User user);
 
@@ -21,4 +24,8 @@ public interface UserService {
     User rejectUser(Long approverId, Long targetUserId);
 
     User login(String email, String password);
+
+    User assignPimpinan(Long adminId, Long targetUserId, Long organizationId);
+
+    Page<User> searchAndSortActiveMembers(Long organizationId, String keyword, int page, int size, String sortBy, String sortDirection);
 }

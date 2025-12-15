@@ -1,0 +1,129 @@
+/* main-layout.css */
+
+/* === LOGIN/REGISTER LAYOUT (Membuat Form di Tengah Layar) === */
+.login-page-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100%;
+    /* Kompensasi padding-top body */
+    margin-top: -70px; 
+}
+
+/* === DASHBOARD GLOBAL CONTAINER === */
+.container {
+    width: 90%;
+    max-width: 1100px;
+    margin: 30px auto;
+    background: var(--color-bg-light );
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+h2, h3, h4 {
+    color: #333;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-top: 20px;
+}
+
+/* === CARD & FORM STYLES (Login/Register) === */
+.card {
+    width: 350px;
+    padding: 30px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.card input, .card button, .card textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.card button[type="submit"] {
+    background: var(--color-success); /* Warna sukses */
+    color: white;
+    font-size: 16px;
+}
+.card button[type="submit"]:hover {
+    background: #1e7e34;
+}
+
+
+/* === LAYOUT & GRID (Untuk Dashboard) === */
+.dashboard-grid {
+    display: flex;
+    gap: 20px; 
+    align-items: flex-start; 
+}
+
+.main-content {
+    flex: 3; 
+    min-width: 65%;
+}
+
+.side-info {
+    flex: 1; 
+    max-width: 300px;
+}
+
+.card-section {
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #fafafa;
+    margin-bottom: 20px;
+}
+
+/* === TABLE STYLES === */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+table th, table td {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    color: #495057;
+}
+
+table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+table button {
+    padding: 5px 10px;
+    margin-right: 5px;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: opacity 0.2s;
+}
+
+/* Action Buttons within tables */
+/* Action Buttons within tables */
+button:contains('Approve') { background-color: var(--color-success); color: white; }
+button:contains('Reject'), button:contains('Batal') { background-color: var(--color-danger); color: white; }
+button:contains('Ajukan') { background-color: var(--color-primary); color: white; } /* Primer Baru */
+button:contains('Assign') { background-color: #6c757d; color: white; }
+button:contains('Buat') { background-color: #17a2b8; color: white; } /* Bisa dipertimbangkan menggunakan Primer juga */
+
+/* === UTILITIES === */
+.text-success { color: var(--color-success); font-weight: bold; }
+.text-error { color: var(--color-danger); font-weight: bold; }

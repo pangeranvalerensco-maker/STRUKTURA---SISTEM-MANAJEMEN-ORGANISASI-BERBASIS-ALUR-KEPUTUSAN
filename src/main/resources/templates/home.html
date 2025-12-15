@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Struktura - Daftar Organisasi</title>
+    <link rel="icon" type="image/png" th:href="@{/images/logo_struktura.png}">
+    <link rel="stylesheet" th:href="@{/css/reset-base.css}">
+    <link rel="stylesheet" th:href="@{/css/header-nav.css}">
+    <link rel="stylesheet" th:href="@{/css/main-layout.css}">
+</head>
+<body>
+    <div th:replace="fragments/header :: public-header-dynamic"></div>
+
+    <div class="container">
+        <h3>🏛️ Daftar Organisasi Aktif</h3>
+        <p>Anda dapat melihat struktur dan deskripsi organisasi di bawah ini. Untuk bergabung, silakan Login atau Daftar.</p>
+        <hr>
+        
+        <div id="organizationListArea">
+            <p>Memuat...</p>
+        </div>
+    </div>
+
+    <script th:src="@{/js/home.js}"></script>
+    <script th:src="@{/js/auth-init.js}"></script>
+</body>
+</html>

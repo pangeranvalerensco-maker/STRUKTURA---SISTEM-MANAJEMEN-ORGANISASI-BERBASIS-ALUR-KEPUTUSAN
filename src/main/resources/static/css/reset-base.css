@@ -1,0 +1,33 @@
+/* reset-base.css */
+
+/* === PENTING: GLOBAL BOX SIZING RESET === */
+*,
+*::before,
+*::after {
+    box-sizing: border-box; 
+}
+
+/* === DEFINISI VARIABEL WARNA (TEMA BARU) === */
+:root {
+    /* Warna Primer dan Aksen */
+    --color-primary: #1f3d7a;       /* Biru Tua/Navy (Header, Logo, Aksen Utama) */
+    --color-secondary: #f5a623;     /* Emas/Oren (Tombol Aksi, Hover) */
+    
+    /* Warna Netral & Teks */
+    --color-text-dark: #333333;
+    --color-bg-light: #ffffff;      /* Latar belakang Card */
+    --color-bg-page: #f4f7f6;       /* Latar belakang Halaman */
+    
+    /* Warna Status */
+    --color-success: #28a745;       /* Hijau (Approve) */
+    --color-danger: #dc3545;        /* Merah (Reject) */
+}
+
+/* === GLOBAL BODY & FONT STYLES === */
+body {
+    font-family: Arial, sans-serif;
+    background-color: var(--color-bg-page); /* Menggunakan variabel */
+    margin: 0;
+    line-height: 1.6;
+    padding-top: 70px;
+}

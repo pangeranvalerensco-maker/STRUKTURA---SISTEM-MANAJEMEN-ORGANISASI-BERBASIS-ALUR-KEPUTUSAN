@@ -1,0 +1,169 @@
+/* header-nav.css */
+
+/* === NAVIGATION (Fixed Top Header) === */
+nav.main-nav-bar {
+    background: var(--color-primary); /* Biru Tua/Navy */
+    color: white;
+    padding: 15px 5%;
+    
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* KIRI: Logo + Link Sosial */
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* KELOMPOK LOGO */
+.logo-group {
+    /* Pastikan elemen di dalamnya sejajar vertikal */
+    display: flex;
+    align-items: center; 
+    gap: 8px;
+}
+
+/* KELOMPOK SOSIAL MEDIA (Ini adalah perbaikan utama!) */
+/* KELOMPOK SOSIAL MEDIA */
+.social-links-group {
+    display: flex;
+    align-items: center; 
+    gap: 15px; 
+}
+/* Pastikan elemen span (Ikuti Kami di) di dalam social-links-group juga sejajar */
+.social-links-group span {
+    /* Hapus margin vertikal yang mungkin ditambahkan oleh browser */
+    margin: 0; 
+    padding: 0;
+}
+/* Pastikan elemen a (link ikon) juga tidak punya margin aneh */
+.social-links-group a {
+    margin: 0; 
+    padding: 0;
+    /* Tambahkan display flex di sini juga, agar ikon di dalamnya sejajar */
+    display: flex;
+    align-items: center;
+}
+
+.social-links-group a:hover .social-icon {
+    transform: translateY(-1px) scale(1.1); 
+}
+
+/* Styling Logo Struktura */
+.app-logo {
+    color: white;
+    font-size: 1.5em;
+    font-weight: bold;
+    text-decoration: none;
+    white-space: nowrap;
+    display: flex; 
+    align-items: center;
+    gap: 8px; 
+}
+
+/* === STYLING UKURAN LOGO BERDASARKAN ID (DIKONTROL DI SINI) === */
+
+/* Logo Struktura */
+#logo-struktura {
+    height: 50px; /* ⬅️ UKURAN LOGO UTAMA */
+    width: auto;
+    object-fit: contain; /* Mencegah logo gepeng/terdistorsi */
+}
+
+/* Container Social Links */
+.social-links {
+    display: flex;
+    align-items: center;
+    gap: 15px; 
+    margin-left: 10px;
+}
+
+/* Aturan dasar untuk semua ikon sosial */
+.social-icon {
+    transition: transform 0.3s ease-out; 
+    vertical-align: middle;
+    object-fit: contain; /* Mencegah ikon gepeng/terdistorsi */
+}
+
+/* Ukuran Spesifik Ikon Sosial (Sesuai Referensi Anda) */
+#logo-ig {
+    height: 20px; /* ⬅️ UKURAN INSTAGRAM */
+    width: 20px;
+    border-radius: 4px;
+}
+#logo-fb {
+    height: 30px; /* ⬅️ UKURAN FACEBOOK */
+    width: 30px;
+}
+#logo-github {
+    height: 21px; /* ⬅️ UKURAN GITHUB */
+    width: 21px;
+    border-radius: 20px;
+}
+
+/* Efek Hover (Universal untuk semua ikon sosial) */
+.social-links a:hover .social-icon {
+    transform: translateY(-1px) scale(1.1); /* Efek Angkat + Membesar */
+}
+
+
+/* KANAN: AUTHENTICATION AREA */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.nav-right a, .nav-right span {
+    color: white;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+    white-space: nowrap;
+}
+
+.nav-right a:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Style khusus untuk tombol DAFTAR/REGISTER */
+.nav-right .auth-register {
+    border: 1px solid white; 
+    background: transparent;
+    padding: 5px 12px;
+}
+
+.nav-right .auth-register:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.nav-right span {
+    color: white;
+    font-weight: bold;
+}
+
+nav button {
+    background: var(--color-secondary); /* Emas/Oren */
+    color: var(--color-text-dark); 
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    white-space: nowrap;
+}
+nav button:hover {
+    background-color: #e0a800; /* Darker secondary */
+}

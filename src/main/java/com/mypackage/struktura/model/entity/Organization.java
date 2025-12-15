@@ -1,6 +1,7 @@
 package com.mypackage.struktura.model.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -27,6 +28,7 @@ public class Organization {
     // 1 organisasi punya banyak anggota (User)
     @OneToMany
     @JoinColumn(name = "organization_id")
+    @JsonIgnore
     private List<User> members;
 
     // === CONSTRUCTOR ===

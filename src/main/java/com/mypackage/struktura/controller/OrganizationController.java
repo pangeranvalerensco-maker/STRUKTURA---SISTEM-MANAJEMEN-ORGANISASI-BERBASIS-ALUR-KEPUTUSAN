@@ -1,7 +1,11 @@
 package com.mypackage.struktura.controller;
 
 import com.mypackage.struktura.model.entity.Organization;
+import com.mypackage.struktura.model.entity.User;
 import com.mypackage.struktura.service.OrganizationService;
+import com.mypackage.struktura.service.UserService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,26 +15,56 @@ import java.util.List;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
+    private final UserService userService;
 
-    public OrganizationController(OrganizationService organizationService) {
+    public OrganizationController(OrganizationService organizationService, UserService userService) {
         this.organizationService = organizationService;
+        this.userService = userService;
     }
 
-    // ADMIN: buat organisasi
+    // ================= CREATE ORGANIZATION (ADMIN ONLY) =================
     @PostMapping
-    public Organization createOrganization(@RequestBody Organization organization) {
-        return organizationService.createOrganization(organization);
+    public ResponseEntity<?> createOrganization(@RequestBody Organization organization) {
+        try {
+            Organization createdOrg = organizationService.createOrganization(organization);
+            return new ResponseEntity<>(createdOrg, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            // Error validasi atau duplikasi nama
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
     }
 
-    // PUBLIC: lihat semua organisasi
+    // ================= ASSIGN PIMPINAN (ADMIN ONLY) =================
+    // Endpoint: /api/organizations/{orgId}/assign-pimpinan/{userId}?adminId={adminId}
+    @PutMapping("/{organizationId}/assign-pimpinan/{targetUserId}")
+    public ResponseEntity<?> assignPimpinan(@PathVariable Long organizationId, 
+                                            @PathVariable Long targetUserId,
+                                            @RequestParam Long adminId) {
+        try {
+            User pimpinan = userService.assignPimpinan(adminId, targetUserId, organizationId);
+            return new ResponseEntity<>(pimpinan, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            // Error logic (bukan Admin, user/org tidak ditemukan, user sudah pimpinan)
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST); 
+        }
+    }
+
+    // ================= GET ALL ORGANIZATIONS (PUBLIC) =================
     @GetMapping
-    public List<Organization> getAllOrganizations() {
-        return organizationService.getAllOrganizations();
+    public ResponseEntity<?> getAllOrganizations() {
+        List<Organization> organizations = organizationService.getAllOrganizations();
+        return new ResponseEntity<>(organizations, HttpStatus.OK);
     }
 
-    // PUBLIC: detail organisasi
+    // ================= GET ORGANIZATION BY ID (PUBLIC) =================
     @GetMapping("/{id}")
-    public Organization getOrganizationById(@PathVariable Long id) {
-        return organizationService.getOrganizationById(id);
+    public ResponseEntity<?> getOrganizationById(@PathVariable Long id) {
+        try {
+            Organization organization = organizationService.getOrganizationById(id);
+            return new ResponseEntity<>(organization, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            // Error 404 jika Organisasi tidak ditemukan
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
     }
 }

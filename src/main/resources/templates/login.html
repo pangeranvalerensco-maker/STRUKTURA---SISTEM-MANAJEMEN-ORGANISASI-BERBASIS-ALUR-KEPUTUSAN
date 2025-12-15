@@ -1,26 +1,37 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
-
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title>Login Struktura</title>
+    <link rel="icon" type="image/png" th:href="@{/images/logo_struktura.png}">
+    <link rel="stylesheet" th:href="@{/css/reset-base.css}">
+    <link rel="stylesheet" th:href="@{/css/header-nav.css}">
+    <link rel="stylesheet" th:href="@{/css/main-layout.css}">
 </head>
+
 <body>
+    <div class="login-page-wrapper">
+        <div class="card">
+            <h2>Login Sistem Struktura</h2>
 
-<div class="card">
-    <h2>Login</h2>
+            <form id="loginForm" onsubmit="event.preventDefault(); login();">
+                <input type="email" id="email" placeholder="Email" required>
+                <input type="password" id="password" placeholder="Password" required>
 
-    <form id="loginForm">
-        <input type="email" id="email" placeholder="Email" required>
-        <input type="password" id="password" placeholder="Password" required>
+                <p id="error" class="text-error"></p>
 
-        <button type="submit">Login</button>
-    </form>
+                <button type="submit">Login</button>
+            </form>
 
-    <p id="error" style="color:red;"></p>
-</div>
+            <p style="text-align: center; margin-top: 15px;">
+                Belum punya akun? <a th:href="@{/register}">Daftar di sini</a>
+            </p>
+        </div>
+    </div>
 
-<script th:src="@{/js/login.js}"></script>
+    <script th:src="@{/js/login.js}"></script>
+    <script th:src="@{/js/auth-init.js}"></script>
 </body>
+
 </html>

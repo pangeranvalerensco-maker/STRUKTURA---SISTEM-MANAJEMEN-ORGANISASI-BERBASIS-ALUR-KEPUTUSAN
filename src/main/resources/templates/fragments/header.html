@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/png" th:href="@{/images/logo_struktura.png}">
+</head>
+<body>
+
+<header th:fragment="public-header-dynamic">
+    <nav class="main-nav-bar">
+        <div class="nav-left">
+            
+            <a href="/" class="app-logo logo-group" id="main-logo-link"> 
+                <img th:src="@{/images/logo_struktura.png}" alt="Logo Struktura" id="logo-struktura"> 
+                STRUKTURA
+            </a>
+            
+            <div class="social-links-group"> 
+                <span style="font-size: 0.9em; margin-right: 5px; color: white;">Ikuti Kami di</span> 
+                
+                <a href="https://www.instagram.com/" target="_blank">
+                    <img th:src="@{/images/icon_instagram.webp}" alt="Instagram" id="logo-ig" class="social-icon">
+                </a>
+                <a href="https://github.com/pangeranvalerensco-maker" target="_blank">
+                    <img th:src="@{/images/icon_github.jpg}" alt="GitHub" id="logo-github" class="social-icon">
+                </a>
+                <a href="https://www.facebook.com/varel.rival.9" target="_blank">
+                    <img th:src="@{/images/icon_facebook.webp}" alt="Facebook" id="logo-fb" class="social-icon">
+                </a>
+            </div>
+        </div>
+
+        <div class="nav-right" id="auth-area">
+            <a th:href="@{/login}">Login</a>
+            <a th:href="@{/register}" class="auth-register">Daftar</a>
+        </div>
+        </nav>
+</header>
+
+<script th:src="@{/js/dashboard.js}"></script>
+<script th:src="@{/js/auth-init.js}"></script> 
+</body>
+</html>
