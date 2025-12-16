@@ -1,6 +1,9 @@
 package com.mypackage.struktura.controller;
 
+import com.mypackage.struktura.model.dto.JoinRequest;
 import com.mypackage.struktura.model.dto.LoginRequest;
+import com.mypackage.struktura.model.dto.PositionUpdate;
+import com.mypackage.struktura.model.dto.MemberNumberUpdate;
 import com.mypackage.struktura.model.entity.User;
 import com.mypackage.struktura.service.UserService;
 import org.springframework.data.domain.Page;
@@ -47,13 +50,13 @@ public class UserController {
 
     // ================= AJUKAN GABUNG =================
     @PostMapping("/{userId}/join/{organizationId}")
-    public ResponseEntity<?> requestJoinOrganization(@PathVariable Long userId,
-                                                     @PathVariable Long organizationId) {
+    public ResponseEntity<?> requestJoinOrganization(@PathVariable Long userId, @PathVariable Long organizationId,
+            @RequestBody JoinRequest request) { // 🛑 TERIMA BODY
         try {
-            User user = userService.requestJoinOrganization(userId, organizationId);
+            User user = userService.requestJoinOrganization(userId, organizationId, request.getReason()); // 🛑 KIRIM
+                                                                                                          // REASON
             return new ResponseEntity<>(user, HttpStatus.OK);
         } catch (RuntimeException e) {
-            // Logic error in service (misal: user sudah active/pending)
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
@@ -61,7 +64,7 @@ public class UserController {
     // ================= APPROVE =================
     @PutMapping("/{approverId}/approve/{targetUserId}")
     public ResponseEntity<?> approveUser(@PathVariable Long approverId, @PathVariable Long targetUserId) {
-          try {
+        try {
             User user = userService.approveUser(approverId, targetUserId);
             return new ResponseEntity<>(user, HttpStatus.OK);
         } catch (RuntimeException e) {
@@ -73,25 +76,26 @@ public class UserController {
     // ================= REJECT MEMBER =================
     @PutMapping("/{approverId}/reject/{targetUserId}")
     public ResponseEntity<?> rejectUser(@PathVariable Long approverId,
-                                        @PathVariable Long targetUserId) {
+            @PathVariable Long targetUserId) {
         try {
             User user = userService.rejectUser(approverId, targetUserId);
             return new ResponseEntity<>(user, HttpStatus.OK);
         } catch (RuntimeException e) {
-             // Logic error (misal: approver bukan Pimpinan, target bukan PENDING)
+            // Logic error (misal: approver bukan Pimpinan, target bukan PENDING)
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
     // ================= LIHAT ANGGOTA (General) =================
-    // Endpoint ini jarang dipakai, lebih baik pakai endpoint spesifik (pending/active)
+    // Endpoint ini jarang dipakai, lebih baik pakai endpoint spesifik
+    // (pending/active)
     @GetMapping("/organization/{organizationId}")
     public ResponseEntity<?> members(@PathVariable Long organizationId) {
         try {
             List<User> users = userService.getUsersByOrganization(organizationId);
             return new ResponseEntity<>(users, HttpStatus.OK);
         } catch (RuntimeException e) {
-             // Logic error (misal: Organization ID tidak valid)
+            // Logic error (misal: Organization ID tidak valid)
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
@@ -103,7 +107,7 @@ public class UserController {
             List<User> users = userService.getPendingMembers(organizationId);
             return new ResponseEntity<>(users, HttpStatus.OK);
         } catch (RuntimeException e) {
-             // Logic error (misal: Organization ID tidak valid)
+            // Logic error (misal: Organization ID tidak valid)
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
@@ -115,7 +119,7 @@ public class UserController {
             List<User> users = userService.getActiveMembers(organizationId);
             return new ResponseEntity<>(users, HttpStatus.OK);
         } catch (RuntimeException e) {
-             // Logic error (misal: Organization ID tidak valid)
+            // Logic error (misal: Organization ID tidak valid)
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
@@ -134,7 +138,8 @@ public class UserController {
     }
 
     // ================= FITUR WAJIB: SEARCH & SORT ACTIVE MEMBERS =================
-    // Endpoint: /api/users/organization/{orgId}/active/search?keyword=andi&page=0&size=10&sortBy=name&sortDirection=ASC
+    // Endpoint:
+    // /api/users/organization/{orgId}/active/search?keyword=andi&page=0&size=10&sortBy=name&sortDirection=ASC
     @GetMapping("/organization/{organizationId}/active/search")
     public ResponseEntity<?> searchActiveMembers(
             @PathVariable Long organizationId,
@@ -145,9 +150,47 @@ public class UserController {
             @RequestParam(defaultValue = "ASC") String sortDirection) {
         try {
             Page<User> userPage = userService.searchAndSortActiveMembers(
-                organizationId, keyword, page, size, sortBy, sortDirection);
-            
+                    organizationId, keyword, page, size, sortBy, sortDirection);
+
             return new ResponseEntity<>(userPage, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // ================= UPDATE USER DETAILS =================
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
+        try {
+            // Asumsikan userDetails kini membawa field baru: name, email, gender, birthDate
+            User updatedUser = userService.updateUser(id, userDetails);
+            return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // 🛑 METHOD BARU: Update Jabatan Anggota
+    @PutMapping("/{pimpinanId}/position/{targetUserId}")
+    public ResponseEntity<?> updateMemberPosition(@PathVariable Long pimpinanId,
+            @PathVariable Long targetUserId,
+            @RequestBody PositionUpdate dto) {
+        try {
+            User updatedUser = userService.updateMemberPosition(pimpinanId, targetUserId, dto.getPosition());
+            return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // 🛑 METHOD BARU: Update Nomor Anggota
+    @PutMapping("/{pimpinanId}/member-number/{targetUserId}")
+    public ResponseEntity<?> updateMemberNumber(@PathVariable Long pimpinanId,
+            @PathVariable Long targetUserId,
+            @RequestBody MemberNumberUpdate dto) {
+        try {
+            User updatedUser = userService.updateMemberNumber(pimpinanId, targetUserId, dto.getMemberNumber());
+            return new ResponseEntity<>(updatedUser, HttpStatus.OK);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }

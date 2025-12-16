@@ -19,6 +19,7 @@ import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Arrays;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -48,9 +49,10 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Email sudah terdaftar.");
         }
 
-        // 2️⃣ Validasi WAJIB
-        if (user.getPassword() == null || user.getPassword().isBlank()) {
-            throw new RuntimeException("Password wajib diisi");
+        // 2️⃣ Validasi WAJIB & Password Minimal 🛑 FIX VALIDASI PASSWORD MANUAL
+        if (user.getPassword() == null || user.getPassword().length() < 6) {
+            // FIX: Minimum 6 karakter
+            throw new RuntimeException("Password wajib diisi dan minimal 6 karakter.");
         }
 
         // 3️⃣ DEFAULT SYSTEM VALUE
@@ -68,7 +70,7 @@ public class UserServiceImpl implements UserService {
 
     // ================= AJUKAN GABUNG =================
     @Override
-    public User requestJoinOrganization(Long userId, Long organizationId) {
+    public User requestJoinOrganization(Long userId, Long organizationId, String reason) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User tidak ditemukan"));
@@ -82,6 +84,7 @@ public class UserServiceImpl implements UserService {
 
         user.setOrganization(organization);
         user.setMemberStatus(MemberStatus.PENDING);
+        user.setApplicationReason(reason);
 
         return userRepository.save(user);
     }
@@ -196,76 +199,205 @@ public class UserServiceImpl implements UserService {
         // 1. Cek: Apakah pemanggil (adminId) benar-benar ADMIN?
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("Admin tidak ditemukan"));
-        
+
         if (admin.getRole() != Role.ADMIN) {
             throw new RuntimeException("Hanya ADMIN yang dapat menetapkan PIMPINAN");
         }
-        
+
         // 2. Ambil User Target dan Organisasi
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new RuntimeException("User target tidak ditemukan"));
 
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new RuntimeException("Organisasi tidak ditemukan"));
-        
+
         // 3. Validasi: Status User Target
         if (targetUser.getRole() == Role.PIMPINAN) {
             throw new RuntimeException("User ini sudah menjabat sebagai PIMPINAN");
         }
         // Pastikan user tidak sedang aktif/pending di organisasi lain
-        if (targetUser.getMemberStatus() == MemberStatus.ACTIVE || targetUser.getMemberStatus() == MemberStatus.PENDING) {
-            throw new RuntimeException("User ini masih ACTIVE/PENDING di organisasi lain. Mohon di-reset/dikeluarkan terlebih dahulu.");
+        if (targetUser.getMemberStatus() == MemberStatus.ACTIVE
+                || targetUser.getMemberStatus() == MemberStatus.PENDING) {
+            throw new RuntimeException(
+                    "User ini masih ACTIVE/PENDING di organisasi lain. Mohon di-reset/dikeluarkan terlebih dahulu.");
         }
-        
+
         // 4. Update Status dan Role
         targetUser.setRole(Role.PIMPINAN);
         targetUser.setOrganization(organization);
         targetUser.setMemberStatus(MemberStatus.ACTIVE); // Pimpinan otomatis ACTIVE
         targetUser.setJoinDate(LocalDate.now());
-        
+
         return userRepository.save(targetUser);
     }
 
     // ================= IMPLEMENTASI SEARCH & SORT =================
     @Override
-    public Page<User> searchAndSortActiveMembers(Long organizationId, String keyword, int page, int size, String sortBy, String sortDirection) {
-        
-        // 1. Definisikan Paging dan Sorting
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+    public Page<User> searchAndSortActiveMembers(Long organizationId, String keyword, int page, int size, String sortBy,
+            String sortDirection) {
+
+        // 🛑 Sederhanakan Sort: Hilangkan validasi yang kompleks, biarkan Spring
+        // menangani exception.
+        // Kita gunakan try-catch untuk Sort.Direction agar aman dari casing error.
+        Sort.Direction direction;
+        try {
+            direction = Sort.Direction.fromString(sortDirection.toUpperCase()); // Pastikan UPPERCASE
+        } catch (IllegalArgumentException e) {
+            direction = Sort.Direction.ASC; // Fallback aman
+        }
+
+        // 🛑 PERHATIAN: JIKA FIELD 'position' TIDAK ADA DI DATABASE, INI AKAN GAGAL.
+        // Asumsi field yang dikirim frontend (name, email, joinDate, position) sudah
+        // valid.
+        Sort sort = Sort.by(direction, sortBy);
         PageRequest pageable = PageRequest.of(page, size, sort);
 
         // 2. Definisikan Kriteria Pencarian (Specification)
-        // Kita akan menggunakan JPA Specification untuk membuat query dinamis
         Specification<User> spec = (root, query, criteriaBuilder) -> {
-            
+
             Predicate finalPredicate = criteriaBuilder.conjunction();
-            
-            // Kriteria Wajib 1: Harus anggota ACTIVE
-            finalPredicate = criteriaBuilder.and(finalPredicate, criteriaBuilder.equal(root.get("memberStatus"), MemberStatus.ACTIVE));
-            
-            // Kriteria Wajib 2: Harus terikat pada organisasi yang diminta
+
+            // Kriteria Wajib 1: ACTIVE
+            finalPredicate = criteriaBuilder.and(finalPredicate,
+                    criteriaBuilder.equal(root.get("memberStatus"), MemberStatus.ACTIVE));
+
+            // 🛑 PERBAIKAN KRITIS: Menggunakan Eksplisit Join untuk Organisasi
             if (organizationId != null) {
-                // Di sini kita asumsikan Organization ID pasti valid
-                finalPredicate = criteriaBuilder.and(finalPredicate, criteriaBuilder.equal(root.get("organization").get("id"), organizationId));
+                // Gunakan Path atau Join yang lebih aman
+                // Path<Long> orgIdPath = root.get("organization").get("id"); // Cara lama yang
+                // sering gagal
+
+                // Coba cara yang lebih aman:
+                finalPredicate = criteriaBuilder.and(finalPredicate,
+                        criteriaBuilder.equal(root.join("organization").get("id"), organizationId));
+
+                // NOTE: Pastikan di User.java, relasinya bernama 'organization' (sudah benar)
             }
-            
-            // Kriteria Opsional 3: Keyword Search (Mencari di Name atau Email)
+
+            // Kriteria Opsional 3: Keyword Search
             if (keyword != null && !keyword.trim().isEmpty()) {
                 String searchLike = "%" + keyword.toLowerCase() + "%";
-                
                 Predicate nameMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), searchLike);
                 Predicate emailMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), searchLike);
-                
-                // Gabungkan pencarian nama dan email dengan OR
-                Predicate searchPredicate = criteriaBuilder.or(nameMatch, emailMatch);
-                
+                Predicate positionMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("position")), searchLike);
+
+                Predicate searchPredicate = criteriaBuilder.or(nameMatch, emailMatch, positionMatch);
                 finalPredicate = criteriaBuilder.and(finalPredicate, searchPredicate);
             }
-            
+
             return finalPredicate;
         };
 
         // 3. Eksekusi Query
         return userRepository.findAll(spec, pageable);
     }
+
+    // ================= UPDATE USER DETAILS =================
+    // ================= UPDATE USER DETAILS =================
+    @Override
+    public User updateUser(Long id, User userDetails) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User tidak ditemukan."));
+
+        // 1. Validasi Email (Jika berubah, pastikan unik)
+        if (!existingUser.getEmail().equals(userDetails.getEmail())) {
+            if (userRepository.findByEmail(userDetails.getEmail()).isPresent()) {
+                throw new RuntimeException("Email sudah digunakan oleh akun lain.");
+            }
+            existingUser.setEmail(userDetails.getEmail());
+        }
+
+        // 2. Update field baru/lama
+        existingUser.setName(userDetails.getName());
+
+        // 🛑 FIX ENUM DESERIALIZATION DARI FRONTEAND:
+        // Asumsi userDetails.getGender() sudah berisi ENUM (MALE/FEMALE)
+        // Jika frontend mengirim String, Jackson sudah gagal di level ini.
+
+        // Cek jika ada nilai Gender baru (Jika userDetails adalah Entity)
+        if (userDetails.getGender() != null) {
+            // Jika frontend mengirim String, kita harus konversi string tersebut ke Enum
+            try {
+                // Konversi string ke enum (misal: "LAKI_LAKI" menjadi MALE)
+                // Karena kita tidak tahu persis string apa yang dikirim frontend:
+
+                // Jika frontend mengirim MALE/FEMALE (String):
+                // existingUser.setGender(Gender.valueOf(userDetails.getGender().name().toUpperCase()));
+
+                // Jika userDetails sudah Entity, maka langsung set:
+                existingUser.setGender(userDetails.getGender());
+
+            } catch (IllegalArgumentException e) {
+                // Tangkap jika string yang dikirim frontend tidak cocok dengan Enum MALE/FEMALE
+                throw new RuntimeException("Nilai Jenis Kelamin tidak valid.");
+            }
+        } else {
+            existingUser.setGender(null);
+        }
+
+        existingUser.setBirthDate(userDetails.getBirthDate());
+
+        // 3. Simpan
+        return userRepository.save(existingUser);
+    }
+
+    // 🛑 METHOD BARU: Mengubah Jabatan Anggota
+    @Override
+    public User updateMemberPosition(Long pimpinanId, Long targetUserId, String newPosition) {
+        // 1. Cek Pimpinan
+        User pimpinan = userRepository.findById(pimpinanId)
+                .orElseThrow(() -> new RuntimeException("Pimpinan tidak ditemukan"));
+        if (pimpinan.getRole() != Role.PIMPINAN) {
+            throw new RuntimeException("Hanya PIMPINAN yang dapat mengubah jabatan.");
+        }
+
+        // 2. Ambil User Target
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new RuntimeException("User target tidak ditemukan."));
+
+        // 3. Validasi Keanggotaan dan Organisasi
+        if (targetUser.getMemberStatus() != MemberStatus.ACTIVE) {
+            throw new RuntimeException("Hanya anggota ACTIVE yang jabatannya bisa diubah.");
+        }
+        if (pimpinan.getOrganization() == null ||
+                !pimpinan.getOrganization().getId().equals(targetUser.getOrganization().getId())) {
+            throw new RuntimeException("Tidak boleh mengedit jabatan anggota dari organisasi lain.");
+        }
+
+        // 4. Update Jabatan
+        targetUser.setPosition(newPosition);
+
+        return userRepository.save(targetUser);
+    }
+
+    // 🛑 METHOD BARU: Menetapkan Nomor Anggota
+    @Override
+    public User updateMemberNumber(Long pimpinanId, Long targetUserId, String memberNumber) {
+        // 1. Cek Pimpinan (Validasi serupa dengan updateMemberPosition)
+        User pimpinan = userRepository.findById(pimpinanId)
+                .orElseThrow(() -> new RuntimeException("Pimpinan tidak ditemukan"));
+        if (pimpinan.getRole() != Role.PIMPINAN) {
+            throw new RuntimeException("Hanya PIMPINAN yang dapat mengubah nomor anggota.");
+        }
+
+        // 2. Ambil User Target
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new RuntimeException("User target tidak ditemukan."));
+
+        // 3. Validasi Keanggotaan dan Organisasi
+        if (targetUser.getMemberStatus() != MemberStatus.ACTIVE) {
+            throw new RuntimeException("Hanya anggota ACTIVE yang nomor anggotanya bisa diubah.");
+        }
+        if (pimpinan.getOrganization() == null ||
+                !pimpinan.getOrganization().getId().equals(targetUser.getOrganization().getId())) {
+            throw new RuntimeException("Tidak boleh mengedit nomor anggota dari organisasi lain.");
+        }
+
+        // 4. Update Nomor Anggota
+        // 🛑 Opsional: Cek duplikasi memberNumber jika diperlukan
+        targetUser.setMemberNumber(memberNumber);
+
+        return userRepository.save(targetUser);
+    }
+
 }

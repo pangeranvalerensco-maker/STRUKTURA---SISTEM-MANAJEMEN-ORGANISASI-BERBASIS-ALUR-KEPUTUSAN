@@ -1,7 +1,4 @@
-// File: home.js
-
-// Navigasi (Logout sudah di auth-init.js, kita hanya butuh ini)
-// ... (Hapus function logout jika masih ada di sini) ...
+// File: home.js (FINAL FIX: Menghilangkan Syntax Error dan Konflik Fetch)
 
 let homeCurrentPage = 0;
 let homeCurrentKeyword = '';
@@ -28,9 +25,8 @@ function handleHomeListPagination(pageNumber) {
     loadOrganizationList();
 }
 
-
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Tambahkan Kontrol Search/Sort di atas tabel
+    // Render Markup Search/Sort
     const container = document.querySelector('.container');
     container.innerHTML = `
         <h3>🏛️ Daftar Organisasi Aktif</h3>
@@ -52,38 +48,67 @@ document.addEventListener('DOMContentLoaded', () => {
             
             <button onclick="handleHomeListSortAndSearch(document.getElementById('homeKeywordSearch').value)">Search</button>
         </div>
+        
         <div id="organizationListArea">
             </div>
         <div id="homePaginationControls" style="margin-top: 10px; text-align: center;"></div>
     `;
     
     // Tambahkan Event Listener untuk Enter
-    document.getElementById('homeKeywordSearch').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            handleHomeListSortAndSearch(this.value);
-        }
-    });
+    const searchInput = document.getElementById('homeKeywordSearch');
+    if(searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleHomeListSortAndSearch(this.value);
+            }
+        });
+    }
 
     loadOrganizationList();
 });
 
 
-// FUNGSI INTI: Memuat Daftar Organisasi dengan Search/Sort/Page (untuk Public/Home)
+// FUNGSI INTI: Memuat Daftar Organisasi
 function loadOrganizationList() {
     const orgListArea = document.getElementById('organizationListArea');
+    const paginationControls = document.getElementById('homePaginationControls');
+    
+    if (!orgListArea) return; 
+
+    orgListArea.innerHTML = `<p>Memuat daftar organisasi...</p>`;
+    paginationControls.innerHTML = '';
+    
+    // 🛑 KITA KEMBALI KE ENDPOINT SEARCH AGAR BACKEND BISA FILTER
+    let endpoint = `/api/organizations/search`;
+    
+    // 1. BUAT QUERY PARAMETERS (Sesuai kebutuhan backend)
+    let queryParams = [];
+
     const encodedKeyword = encodeURIComponent(homeCurrentKeyword);
     
-    // Endpoint Publik
-    const endpoint = `/api/organizations/search?keyword=${encodedKeyword}&page=${homeCurrentPage}&size=10&sortBy=${homeCurrentSortBy}&sortDirection=${homeCurrentSortDirection}`;
-    
-    orgListArea.innerHTML = `<p>Memuat daftar organisasi...</p>`;
-    
+    // 2. Tambahkan Keyword (Selalu dikirim, agar backend bisa pakai defaultValue="")
+    queryParams.push(`keyword=${encodedKeyword}`);
+
+    // 3. Tambahkan Pagination dan Sort (Wajib dikirim untuk Pageable/Sort)
+    queryParams.push(`page=${homeCurrentPage}`);
+    queryParams.push(`size=10`); 
+    queryParams.push(`sortBy=${homeCurrentSortBy}`);
+    queryParams.push(`sortDirection=${homeCurrentSortDirection}`);
+
+    // Gabungkan queryParams ke endpoint
+    if (queryParams.length > 0) {
+        endpoint += '?' + queryParams.join('&');
+    }
+
     fetch(endpoint)
         .then(res => {
-             if (!res.ok) throw new Error("Gagal memuat daftar organisasi.");
-             return res.json();
+             if (!res.ok) throw new Error(`Fetch Gagal. Status: ${res.status}.`);
+             // Endpoint GET ALL mengembalikan List<Organization> (bukan Page<T>)
+             return res.json(); 
         })
-        .then(pageData => {
+        .then(organizations => {
+            // 🛑 Data yang diterima adalah ARRAY (List<Organization>), bukan PageData
+            
             let htmlContent = `
                 <table class="data-table">
                     <thead>
@@ -97,39 +122,32 @@ function loadOrganizationList() {
                     <tbody>
             `;
 
-            pageData.content.forEach(org => {
-                if (org.status === "ACTIVE") { 
-                    htmlContent += `
-                        <tr>
-                            <td>${org.name}</td>
-                            <td>${org.description || 'Tidak ada deskripsi'}</td>
-                            <td><span class="text-success">${org.status}</span></td>
-                            <td>
-                                <span style="color: gray;">Login untuk Gabung</span>
-                            </td>
-                        </tr>
-                    `;
-                }
-            });
+            if (organizations.length === 0) {
+                 htmlContent += `<tr><td colspan="4">Tidak ada organisasi aktif yang ditemukan.</td></tr>`;
+            } else {
+                 organizations.forEach(org => {
+                    if (org.status === "ACTIVE") { 
+                        htmlContent += `
+                            <tr>
+                                <td>${org.name}</td>
+                                <td>${org.description || 'Tidak ada deskripsi'}</td>
+                                <td><span class="text-success">${org.status}</span></td>
+                                <td>
+                                    <span style="color: gray;">Login untuk Gabung</span>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+            }
 
             htmlContent += `</tbody></table>`;
             orgListArea.innerHTML = htmlContent;
             
-            // LOGIKA PAGINATION (Home)
-            const paginationControls = document.getElementById('homePaginationControls');
+            // Hapus logika pagination, karena data adalah List
             paginationControls.innerHTML = '';
-            
-            if (pageData.totalPages > 1) {
-                if (!pageData.first) {
-                    paginationControls.innerHTML += `<button onclick="handleHomeListPagination(${pageData.number - 1})">Prev</button> `;
-                }
-                paginationControls.innerHTML += `<span>Halaman ${pageData.number + 1} dari ${pageData.totalPages}</span>`;
-                if (!pageData.last) {
-                    paginationControls.innerHTML += ` <button onclick="handleHomeListPagination(${pageData.number + 1})">Next</button>`;
-                }
-            }
         })
         .catch(err => {
-            orgListArea.innerHTML = `<p class="text-error">Gagal memuat daftar organisasi. ${err.message}</p>`;
+            orgListArea.innerHTML = `<p class="text-error">ERROR: Gagal memuat data. Periksa konsol browser atau backend API. ${err.message}</p>`;
         });
 }

@@ -3,6 +3,8 @@ package com.mypackage.struktura.model.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @Table(name = "users")
 public class User {
@@ -40,7 +42,17 @@ public class User {
     // === RELASI ===
     @ManyToOne
     @JoinColumn(name = "organization_id") // foreign key ke Organization
+    // @JsonIgnoreProperties("members")
     private Organization organization;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender; // WAJIB ADA
+
+    private LocalDate birthDate; // WAJIB ADA
+
+    private String applicationReason;
+
+    private String position;
 
     // constructor, getters, setters lainnya
 
@@ -127,5 +139,37 @@ public class User {
 
     public void setExperienceSummary(String experienceSummary) {
         this.experienceSummary = experienceSummary;
+    }
+
+    public Gender getGender() {
+        return gender;  
+    }
+
+    public void setGender(Gender gender) {
+        this.gender = gender;
+    }
+
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
+
+    public void setBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public String getApplicationReason() {
+        return applicationReason;
+    }
+
+    public void setApplicationReason(String applicationReason) {
+        this.applicationReason = applicationReason;
+    }
+
+    public String getPosition() {
+        return position;
+    }
+
+    public void setPosition(String position) {
+        this.position = position;
     }
 }

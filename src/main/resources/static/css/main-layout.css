@@ -14,10 +14,10 @@
 /* === DASHBOARD GLOBAL CONTAINER === */
 .container {
     width: 90%;
-    max-width: 1100px;
-    margin: 30px auto;
+    /* max-width: 1100px;    */
+    margin: 5px auto;
     background: var(--color-bg-light );
-    padding: 20px;
+    padding: 25px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -57,12 +57,48 @@ h2, h3, h4 {
     background: #1e7e34;
 }
 
+/* --- 🛑 PERBAIKAN HOVER & JARAK TOMBOL --- */
+
+/* Hover Universal untuk Semua Tombol */
+button:hover {
+    filter: brightness(115%); /* Membuat tombol sedikit lebih cerah saat di-hover */
+}
+
+/* Tombol Edit/Aksi */
+.btn-primary {
+    background-color: #007bff; /* Biru */
+    color: white;
+}
+.btn-primary:hover {
+    background-color: #0056b3; /* Biru lebih gelap saat hover */
+}
+
+/* Tombol Approve/Reject */
+.btn-success { background-color: #28a745; color: white; }
+.btn-danger { background-color: #dc3545; color: white; }
+
+/* Jarak Tombol di dalam Cell Aksi */
+/* Ini berlaku untuk semua tombol di dalam td yang memiliki class action-cell */
+.action-cell button {
+    margin-right: 5px; 
+    margin-bottom: 5px; 
+    white-space: nowrap; /* Mencegah tombol dipisah */
+}
+/* 🛑 Kritis: Jarak Tombol Edit Jabatan dan Edit No Anggota */
+.action-cell {
+    /* Menggunakan Flexbox di cell Aksi agar tombol rapi */
+    display: flex;
+    flex-wrap: wrap; /* Memungkinkan wrap jika ruang sempit */
+    gap: 5px; /* Memberi jarak 5px antar elemen di dalam cell */
+    padding: 5px;
+}
 
 /* === LAYOUT & GRID (Untuk Dashboard) === */
 .dashboard-grid {
-    display: flex;
-    gap: 20px; 
-    align-items: flex-start; 
+    display: grid;
+    grid-template-columns: 6fr 1fr; /* Main Content (3/4) | Sidebar (1/4) */
+    gap: 15px; 
+    padding: 10px 10px;
 }
 
 .main-content {
@@ -94,7 +130,7 @@ table {
 table th, table td {
     padding: 12px 15px;
     border: 1px solid #ddd;
-    text-align: left;
+    /* text-align: left; */
 }
 
 table th {
@@ -127,3 +163,216 @@ button:contains('Buat') { background-color: #17a2b8; color: white; } /* Bisa dip
 /* === UTILITIES === */
 .text-success { color: var(--color-success); font-weight: bold; }
 .text-error { color: var(--color-danger); font-weight: bold; }
+
+
+.user-dropdown { position: relative; display: inline-block; }
+.dropdown-toggle { background: #007bff; color: white; padding: 10px; border: none; cursor: pointer; border-radius: 4px; }
+.dropdown-menu { display: none; position: absolute; right: 0; background-color: #f9f9f9; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; border-radius: 4px; }
+.dropdown-menu a { color: black; padding: 12px 16px; text-decoration: none; display: block; }
+.dropdown-menu a:hover { background-color: #f1f1f1 }
+.show { display: block; }
+
+/* --- 🛑 PERBAIKAN UMUM UI/UX --- */
+
+/* 1. Mengatasi Input dan Select Jelek */
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], select, textarea {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* Agar padding tidak menambah lebar */
+    transition: border-color 0.3s;
+    /* Lebar penuh di form edit, tapi kita atur di JS untuk yang inline */
+}
+input[type="text"]:focus, select:focus, textarea:focus {
+    border-color: #007bff; /* Warna fokus biru */
+    outline: none;
+}
+
+/* 2. Tombol Dasar (Untuk Approve/Reject) */
+button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+    margin-right: 5px; /* Memberi jarak antar tombol */
+}
+
+.btn-success {
+    background-color: #28a745; /* Hijau */
+    color: white;
+}
+.btn-danger {
+    background-color: #dc3545; /* Merah */
+    color: white;
+}
+
+/* 🛑 Tambahkan Hover di Tombol Pop-up (Edit Jabatan/No Anggota) */
+/* Tombol di dalam Modal */
+#positionModal button, #memberNumberModal button {
+    /* Mewarisi style umum, cukup pastikan hover berjalan */
+    transition: background-color 0.2s, filter 0.15s;
+}
+#positionModal button:hover, #memberNumberModal button:hover {
+    filter: brightness(115%);
+}
+
+/* --- 🛑 PERBAIKAN DASHBOARD LAYOUT & TABEL --- */
+
+/* 1. Memastikan Dashboard Grid berfungsi */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 5fr 1fr; /* Main Content (3/4) | Sidebar (1/4) */
+    gap: 15px;
+    padding: 20px;
+}
+
+/* --- 🛑 PERBAIKAN DIMENSI TABEL (TOTAL HARUS 100%) --- */
+
+.data-table {
+    width: 100%; 
+    table-layout: fixed; /* Kritis: Memaksa tabel sesuai lebar 100% */
+    border-collapse: collapse;
+}
+
+/* --- 🛑 FINAL FIX: LEBAR KOLOM ACTIVE MEMBERS (Total 100%) --- */
+
+/* 🛑 TOTAL LEBAR AKTIF MEMBERS */
+/* ------------------------------------------------------------------------------------------------ */
+/* | No(3%) | Nama(17%) | Email(20%) | Jabatan(15%) | Gabung(8%) | No Anggota(7%) | JK(7%) | Aksi(20%) | */
+/* ------------------------------------------------------------------------------------------------ */
+#activeTable th:nth-child(1), #activeTable td:nth-child(1) { width: 3%; }    /* No (Dikecilkan) */
+#activeTable th:nth-child(2), #activeTable td:nth-child(2) { width: 17%; }   /* Nama (Lebih nyaman) */
+#activeTable th:nth-child(3), #activeTable td:nth-child(3) { width: 23%; }   /* Email (Lebih nyaman) */
+#activeTable th:nth-child(4), #activeTable td:nth-child(4) { width: 20%; }   /* Jabatan (Lebih nyaman) */
+#activeTable th:nth-child(5), #activeTable td:nth-child(5) { width: 9%; }    /* Tanggal Gabung */
+#activeTable th:nth-child(6), #activeTable td:nth-child(6) { width: 7%; }    /* No Anggota */
+#activeTable th:nth-child(7), #activeTable td:nth-child(7) { width: 7%; }    /* Jenis Kelamin */
+#activeTable th:nth-child(8), #activeTable td:nth-child(8) { width: 14%; }   /* Aksi (Diberi ruang yang cukup untuk dua tombol dan gap) */
+/* Total = 3 + 17 + 20 + 15 + 8 + 7 + 7 + 23 = 100% */
+
+
+/* --- 🛑 FINAL FIX: LEBAR KOLOM TABEL PENDING (Perlu ruang untuk Alasan Gabung) --- */
+/* | Nama(20%) | Email(25%) | Alasan Gabung(35%) | Aksi(20%) | */
+#pendingTable th:nth-child(1), #pendingTable td:nth-child(1) { width: 25%; }
+#pendingTable th:nth-child(2), #pendingTable td:nth-child(2) { width: 25%; }
+#pendingTable th:nth-child(3), #pendingTable td:nth-child(3) { width: 35%; } /* Alasan Gabung */
+#pendingTable th:nth-child(4), #pendingTable td:nth-child(4) { width: 15%; } /* Aksi */
+
+
+/* --- 🛑 FINAL FIX: LEBAR KOLOM TABEL ORGANISASI --- */
+/* | Nama(20%) | Deskripsi(45%) | Status(15%) | Aksi(20%) | */
+#organizationList th:nth-child(1), #organizationList td:nth-child(1) { width: 25%; }
+#organizationList th:nth-child(2), #organizationList td:nth-child(2) { width: 45%; }
+#organizationList th:nth-child(3), #organizationList td:nth-child(3) { width: 15%; } /* Status */
+#organizationList th:nth-child(4), #organizationList td:nth-child(4) { width: 15%; } /* Aksi */
+
+/* Mengatasi Word-wrap dan Padding di cell */
+.data-table th, .data-table td {
+    padding: 8px 5px;
+    /* text-align: center; */
+    border-bottom: 1px solid #eee;
+    word-wrap: break-word; 
+    overflow-wrap: break-word; 
+}
+
+.data-table th {
+    background-color: #f1f1f1;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* 3. Pewarnaan Halaman (Dashboard) */
+body {
+    background-color: #f4f7f6; /* Abu-abu muda yang lebih cerah */
+}
+.card-section {
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Sedikit bayangan */
+    margin-bottom: 20px;
+}
+
+/* --- 🛑 PERBAIKAN TAMPILAN PROFIL SAYA --- */
+
+.profile-details {
+    /* Gunakan display grid di card section untuk layout yang lebih fleksibel */
+    display: block; 
+}
+
+.profile-details .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+}
+
+.profile-details .data-table tr {
+    border-bottom: 1px solid #f0f0f0; /* Garis tipis antar baris */
+}
+
+.profile-details .data-table th, 
+.profile-details .data-table td {
+    padding: 10px 0; /* Padding vertikal yang lebih lega */
+    vertical-align: top;
+    line-height: 1.5;
+}
+
+/* Kritis: Mengatur lebar kolom (Key / Value) */
+.profile-details .data-table th {
+    /* Kolom kiri (Key/Label) */
+    width: 25%; 
+    font-weight: bold;
+    color: #333;
+    text-align: left; /* Pastikan label rata kiri */
+    padding-left: 10px;
+}
+
+.profile-details .data-table td {
+    /* Kolom kanan (Value) */
+    width: 65%;
+    color: #555;
+    padding-left: 10px; /* Jarak antara titik dua dan nilai */
+}
+
+/* --- 🛑 PERBAIKAN TAMPILAN FORM EDIT PROFIL --- */
+
+#editProfileForm {
+    display: grid;
+    /* Grid 2 kolom, setiap kolom memiliki lebar yang sama */
+    grid-template-columns: 1fr 1fr; 
+    gap: 20px; /* Jarak antar kolom dan baris */
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #ffffff;
+}
+
+/* Pastikan input di dalam grid mengambil lebar penuh dari kolomnya */
+#editProfileForm input[type="text"],
+#editProfileForm input[type="email"],
+#editProfileForm input[type="date"],
+#editProfileForm select {
+    width: 100%;
+    /* Gunakan padding dan border dari style input umum */
+}
+
+/* Label harus berada di atas input */
+#editProfileForm label {
+    display: block; /* Membuat label berada di baris sendiri */
+    margin-bottom: 5px; 
+    font-weight: bold;
+    color: #495057;
+}
+
+/* Kritis: Agar tombol berada di baris penuh di bawah semua kolom */
+#editProfileForm button {
+    grid-column: span 2; /* Rentang dua kolom */
+    margin-top: 10px;
+    width: auto;
+}
+#editProfileForm p#editMessage {
+    grid-column: span 2;
+    text-align: center;
+}

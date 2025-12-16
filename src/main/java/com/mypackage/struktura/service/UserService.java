@@ -11,7 +11,7 @@ public interface UserService {
 
     User registerUser(User user);
 
-    User requestJoinOrganization(Long userId, Long organizationId);
+    User requestJoinOrganization(Long userId, Long organizationId, String reason);
 
     List<User> getUsersByOrganization(Long organizationId);
 
@@ -28,4 +28,10 @@ public interface UserService {
     User assignPimpinan(Long adminId, Long targetUserId, Long organizationId);
 
     Page<User> searchAndSortActiveMembers(Long organizationId, String keyword, int page, int size, String sortBy, String sortDirection);
+
+    User updateUser(Long id, User userDetails);
+
+    User updateMemberPosition(Long pimpinanId, Long targetUserId, String newPosition); // 🛑 METHOD BARU
+
+    User updateMemberNumber(Long pimpinanId, Long targetUserId, String memberNumber); // 🛑 METHOD BARU
 }
