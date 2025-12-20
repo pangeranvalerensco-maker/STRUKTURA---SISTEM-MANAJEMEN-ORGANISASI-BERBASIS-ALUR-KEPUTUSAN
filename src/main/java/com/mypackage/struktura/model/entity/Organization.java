@@ -51,4 +51,6 @@ public class Organization {
 
     private String externalLink;
     private String membershipRequirement;
+
+    private String period;
 }

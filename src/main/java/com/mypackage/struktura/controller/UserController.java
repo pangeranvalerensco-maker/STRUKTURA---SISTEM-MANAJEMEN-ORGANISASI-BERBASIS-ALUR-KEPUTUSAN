@@ -206,7 +206,7 @@ public class UserController {
             @RequestParam String reason) {
         try {
             userService.revokeMembership(userId, reason);
-            return ResponseEntity.ok("Keanggotaan berhasil dicabut");
+            return ResponseEntity.ok(Map.of("message", "Keanggotaan berhasil dicabut"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

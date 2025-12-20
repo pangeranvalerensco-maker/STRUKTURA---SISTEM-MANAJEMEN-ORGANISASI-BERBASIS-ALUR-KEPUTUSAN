@@ -27,7 +27,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     User getUserById(Long id);
 
-    // Tambahkan di UserRepository.java
     List<User> findByOrganizationIdAndRole(Long organizationId, Role role);
 
 }

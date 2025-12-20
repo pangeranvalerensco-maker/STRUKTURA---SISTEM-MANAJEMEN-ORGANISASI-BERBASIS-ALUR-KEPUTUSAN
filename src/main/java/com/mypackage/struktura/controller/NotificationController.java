@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -34,5 +35,22 @@ public class NotificationController {
         // 🛑 Logika for-loop dipindah ke Service
         notificationService.markAllAsRead(userId);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/to-admin")
+    public ResponseEntity<?> sendToAdmin(@RequestBody Map<String, String> body) {
+        String message = body.get("message");
+        // Gunakan service yang sudah ada untuk broadcast ke semua admin
+        notificationService.sendNotificationToAllAdmins(message);
+        return ResponseEntity.ok(Map.of("message", "Pesan terkirim"));
+    }
+
+    @GetMapping("/user/{userId}/paged")
+    public ResponseEntity<?> getNotificationsPaged(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        // Memanggil service yang mengembalikan Page<Notification>
+        return ResponseEntity.ok(notificationService.getUserNotificationsPaged(userId, page, size));
     }
 }

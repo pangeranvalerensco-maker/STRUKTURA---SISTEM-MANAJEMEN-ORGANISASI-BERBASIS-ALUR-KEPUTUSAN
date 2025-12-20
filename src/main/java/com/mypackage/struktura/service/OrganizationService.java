@@ -23,4 +23,8 @@ public interface OrganizationService {
     Organization updateOrganization(Long orgId, Organization updatedData, Long pimpinanId);
 
     void deleteOrganization(Long orgId, Long adminId);
+
+    Organization fullUpdate(Long id, Long pimpinanId, Organization updatedData);
+    
+    void createDeleteRequest(Long id, Long pimpinanId, String reason);
 }

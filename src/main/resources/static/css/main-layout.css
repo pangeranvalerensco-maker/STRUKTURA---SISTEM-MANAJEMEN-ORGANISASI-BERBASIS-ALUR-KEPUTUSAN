@@ -11,15 +11,27 @@
     margin-top: -70px; 
 }
 
+/* 🛑 BUAT KELAS KHUSUS UNTUK DASHBOARD */
+.dashboard-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.dashboard-body .container {
+    flex: 1; /* Hanya dorong footer di Dashboard */
+    margin-bottom: 30px;
+}
+
 /* === DASHBOARD GLOBAL CONTAINER === */
 .container {
     width: 90%;
-    /* max-width: 1100px;    */
-    margin: 5px auto;
-    background: var(--color-bg-light );
-    padding: 25px;
+    margin: 20px auto;
+    background: var(--color-bg-light);
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    
 }
 
 h2, h3, h4 {
@@ -950,14 +962,14 @@ a.member-link:hover,
     background-color: #f0f7ff !important;
 }
 
-.member-link-text {
+.member-link-text{
     color: #3182ce;
     cursor: pointer;
     text-decoration: none;
 }
 
 /* Efek hover untuk link anggota dan pimpinan */
-.member-link-text:hover, .pimpinan-link:hover {
+.member-link-text:hover, .pimpinan-link:hover{
     text-decoration: underline !important;
     color: #4e9eff;
 }
@@ -967,3 +979,173 @@ a.member-link:hover,
     color: #1a365d !important;
 }
 
+.main-footer {
+    margin-top: auto;
+    width: 100%;
+    background: #1a202c;
+    color: #cbd5e0;
+    padding: 40px 20px 20px;
+    margin-top: 50px;
+    border-top: 4px solid #3182ce;
+}
+.footer-content {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    max-width: 1200px;
+    margin: 0 auto;
+    gap: 30px;
+}
+.footer-section h4 {
+    color: #fff;
+    margin-bottom: 15px;
+}
+.footer-link {
+    color: #cbd5e0; /* Warna abu-abu terang sesuai tema footer Anda */
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer-link:hover {
+    color: #3182ce; /* Warna biru saat diarahkan kursor */
+    text-decoration: underline;
+}
+
+/* Opsional: Menambahkan jarak antar paragraf di footer agar tidak terlalu rapat */
+.footer-section p {
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+.footer-section ul { list-style: none; padding: 0; }
+.footer-section ul li { margin-bottom: 8px; }
+.footer-section a { color: #cbd5e0; text-decoration: none; transition: 0.3s; }
+.footer-section a:hover { color: #3182ce; }
+.footer-bottom {
+    text-align: center;
+    padding-top: 30px;
+    border-top: 1px solid #2d3748;
+    margin-top: 30px;
+    font-size: 0.9rem;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Layout Container Utama */
+.auth-split-container {
+    display: flex;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100vh;
+}
+
+.auth-info-side {
+    flex: 1.2;
+    background: linear-gradient(135deg, #2b6cb0 0%, #1a365d 100%);
+    color: white;
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    /* Ganti space-between menjadi center agar teks naik ke tengah */
+    justify-content: center; 
+    gap: 40px; /* Memberi jarak antara logo dan teks */
+}
+
+.auth-welcome-content h2 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    line-height: 1.2;
+    font-weight: 700; /* Tebalkan sedikit agar lebih tegas */
+    color: white;
+}
+
+.auth-brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.auth-logo {
+    width: 50px;
+    height: 50px;
+    filter: brightness(0) invert(1); /* Membuat logo jadi putih */
+}
+
+
+.auth-features {
+    margin-top: 40px;
+}
+
+.feat-item {
+    margin-bottom: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 12px 20px;
+    border-radius: 10px;
+    display: inline-block;
+    width: 100%;
+}
+
+/* Bagian Kanan (Form Putih) */
+.auth-form-side {
+    flex: 1;
+    background: #f7fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.auth-card {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    width: 100%;
+    max-width: 450px;
+}
+
+.auth-subtitle {
+    color: #718096;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.btn-auth {
+    width: 100%;
+    padding: 14px;
+    background: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.btn-auth:hover {
+    background: #2b6cb0;
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 25px;
+    color: #4a5568;
+}
+
+/* Responsif untuk HP */
+@media (max-width: 900px) {
+    .auth-info-side { display: none; } /* Sembunyikan sisi kiri di layar kecil */
+}

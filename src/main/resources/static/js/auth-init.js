@@ -1,19 +1,20 @@
-// --- 1. SESSION GUARD (Wajib Paling Atas) ---
+// --- 1. SESSION GUARD (Perbaikan) ---
 const currentUserId = localStorage.getItem("CURRENT_USER_ID");
 const isLoggedIn = currentUserId !== null;
 const currentPath = window.location.pathname;
 
-// Daftar halaman yang boleh diakses tanpa login
-const publicPages = ['/login', '/register', '/'];
-const isPublicPage = publicPages.includes(currentPath);
+// Daftar halaman yang hanya boleh diakses setelah login
+const protectedPaths = ['/struktura']; 
+const isTryingProtected = protectedPaths.some(path => currentPath.startsWith(path));
 
-// Proteksi Akses Ilegal
-if (isLoggedIn && isPublicPage) {
-    // Jika sudah login tapi coba buka Login/Home, tendang ke Dashboard
+// LOGIKA BARU:
+if (isLoggedIn && (currentPath === '/login' || currentPath === '/register')) {
+    // Jika sudah login tapi buka Login/Regis, tendang ke Dashboard
     window.location.replace("/struktura");
-} else if (!isLoggedIn && currentPath.includes('/struktura')) {
-    // Jika belum login tapi coba buka Dashboard, paksa Login
-    window.location.replace("/login");
+} else if (!isLoggedIn && isTryingProtected) {
+    // Jika BELUM login, kita izinkan masuk ke /struktura (sebagai Tamu)
+    // Tapi kita tambahkan penanda di GLOBAL_USER agar struktura.js tahu ini Tamu
+    console.log("Akses sebagai Tamu diizinkan");
 }
 
 // --- 2. HEADER & UI LOGIC ---
@@ -79,27 +80,6 @@ window.addEventListener('click', (event) => {
 
 // --- 3. UTILITIES (Toast, Confirm, Logout) ---
 
-function showToast(message, type = 'success', duration = 3000) {
-    let container = document.getElementById('toastContainer');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toastContainer';
-        container.className = 'toast-container';
-        document.body.appendChild(container);
-    }
-
-    const toastElement = document.createElement('div');
-    toastElement.className = `toast toast-${type}`;
-    toastElement.textContent = message;
-
-    container.appendChild(toastElement);
-    setTimeout(() => toastElement.classList.add('show'), 10);
-    setTimeout(() => {
-        toastElement.classList.remove('show');
-        setTimeout(() => toastElement.remove(), 500);
-    }, duration);
-}
-
 function customConfirm(message, onConfirm) {
     const modalHtml = `
         <div id="customConfirmOverlay" class="confirm-overlay">
@@ -122,6 +102,7 @@ function customConfirm(message, onConfirm) {
     };
 }
 
+
 function logout() {
     customConfirm("Apakah Anda yakin ingin keluar?", () => {
         showToast("Logout berhasil...", "default");
@@ -132,6 +113,26 @@ function logout() {
     });
 }
 
+function showToast(message, type = 'success', duration = 3000) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toastElement = document.createElement('div');
+    toastElement.className = `toast toast-${type}`;
+    toastElement.textContent = message;
+
+    container.appendChild(toastElement);
+    setTimeout(() => toastElement.classList.add('show'), 10);
+    setTimeout(() => {
+        toastElement.classList.remove('show');
+        setTimeout(() => toastElement.remove(), 500);
+    }, duration);
+}
 // Inisialisasi DOM
 document.addEventListener('DOMContentLoaded', () => {
     updateLogoLink();

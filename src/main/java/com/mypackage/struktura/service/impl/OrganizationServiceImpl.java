@@ -22,42 +22,44 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
-    public OrganizationServiceImpl(OrganizationRepository organizationRepository, UserRepository userRepository, NotificationService notificationService) {
+    public OrganizationServiceImpl(OrganizationRepository organizationRepository, UserRepository userRepository,
+            NotificationService notificationService) {
         this.organizationRepository = organizationRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
     }
 
     @Override
-    @Transactional
+    @Transactional // 🛑 Penting karena memanipulasi tabel Organizations, Users, dan Notification
+                   // sekaligus
     public Organization createOrganization(Organization organization, Long creatorId) {
-        // 1. Cari user dan validasi keberadaannya
+        // 1. Validasi Keberadaan User
         User creator = userRepository.findById(creatorId)
                 .orElseThrow(() -> new RuntimeException("User tidak ditemukan"));
 
-        // 2. LOGIKA PROTEKSI: Pindahkan dari Controller ke sini
+        // 2. Logika Proteksi: Cek kepemilikan organisasi [Pindahan dari Controller]
         if (creator.getOrganization() != null) {
             throw new RuntimeException("Anda sudah terdaftar di organisasi lain.");
         }
 
-        // 3. Set default value organisasi
+        // 3. Inisialisasi Data Organisasi
         organization.setCreatedDate(LocalDate.now());
         organization.setStatus("ACTIVE");
         Organization savedOrg = organizationRepository.save(organization);
 
-        // 4. Logika Update User (Jika bukan ADMIN, jadikan PIMPINAN)
-        if (!creator.getRole().name().equals("ADMIN")) {
+        // 4. Logika Bisnis: Update User & Kirim Notifikasi
+        if (creator.getRole() != Role.ADMIN) {
+            // User biasa mendaftar organisasi -> Otomatis jadi Pimpinan
             creator.setOrganization(savedOrg);
             creator.setRole(Role.PIMPINAN);
             creator.setMemberStatus(MemberStatus.ACTIVE);
             creator.setPosition("Ketua Umum / Founder");
-            userRepository.save(creator); // Langsung pakai repository di dalam service
+            userRepository.save(creator);
 
-            // Kirim notifikasi
             notificationService.sendNotificationToAllAdmins("ORGANISASI_BARU: " + creator.getName()
                     + " telah mendaftarkan organisasi baru: " + savedOrg.getName());
         } else {
-            // Logika jika yang membuat adalah ADMIN
+            // Jika Admin yang membuat, cukup kirim notifikasi sistem
             notificationService
                     .sendNotificationToAllAdmins("NEW_ORG_REQUEST:" + savedOrg.getId() + ":" + savedOrg.getName());
         }
@@ -174,5 +176,43 @@ public class OrganizationServiceImpl implements OrganizationService {
             return userRepository.save(target);
         }
         return target;
+    }
+
+    @Override
+    @Transactional
+    public Organization fullUpdate(Long id, Long pimpinanId, Organization updatedData) {
+        // Gunakan logika update yang sudah ada atau buat baru yang mencakup semua field
+        Organization org = getOrganizationById(id);
+
+        // Validasi Pimpinan
+        User pimpinan = userRepository.findById(pimpinanId).orElseThrow();
+        if (pimpinan.getRole() != Role.PIMPINAN || !pimpinan.getOrganization().getId().equals(id)) {
+            throw new RuntimeException("Akses ditolak: Anda bukan pimpinan organisasi ini.");
+        }
+
+        org.setName(updatedData.getName());
+        org.setPeriod(updatedData.getPeriod());
+        org.setEstablishedDate(updatedData.getEstablishedDate());
+        org.setField(updatedData.getField());
+        org.setScope(updatedData.getScope());
+        org.setDescription(updatedData.getDescription());
+        org.setVisionMission(updatedData.getVisionMission());
+        org.setAddress(updatedData.getAddress());
+        org.setExternalLink(updatedData.getExternalLink());
+        org.setMembershipRequirement(updatedData.getMembershipRequirement());
+        org.setStatus(updatedData.getStatus()); // Ini yang tadi menyebabkan error 400
+
+        return organizationRepository.save(org);
+    }
+
+    @Override
+    @Transactional
+    public void createDeleteRequest(Long id, Long pimpinanId, String reason) {
+        Organization org = getOrganizationById(id);
+        User pimpinan = userRepository.findById(pimpinanId).orElseThrow();
+
+        // Kirim notifikasi ke Admin sebagai pengganti sistem request-delete sementara
+        notificationService
+                .sendNotificationToAllAdmins("DELETE_REQUEST:" + id + ":" + org.getName() + " Alasan: " + reason);
     }
 }

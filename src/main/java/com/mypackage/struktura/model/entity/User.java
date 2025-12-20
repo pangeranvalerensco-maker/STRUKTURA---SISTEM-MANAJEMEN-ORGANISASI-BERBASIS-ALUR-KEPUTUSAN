@@ -31,7 +31,6 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @NotNull(message = "Role wajib ditentukan")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
@@ -41,12 +40,11 @@ public class User {
 
     private LocalDate joinDate;
 
-    @NotNull(message = "Status anggota wajib ditentukan")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MemberStatus memberStatus;
 
-    @Column(length = 500)
+    @Column(length = 2000)
     private String experienceSummary;
 
     @ManyToOne
@@ -56,7 +54,6 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
-    @NotNull(message = "Tanggal lahir wajib diisi")
     @Past(message = "Tanggal lahir harus di masa lalu")
     private LocalDate birthDate;
 

@@ -10,16 +10,44 @@
     <link rel="stylesheet" th:href="@{/css/main-layout.css}">
 </head>
 
-<body>
+<body class="dashboard-body">
     <div th:replace="fragments/header :: public-header-dynamic"></div>
 
-    <div class="container">
-    </div>
+    <div class="container"></div>
 
     <div id="toastContainer" class="toast-container"></div>
 
+    <footer class="main-footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>Struktura</h4>
+                <p>Sistem Manajemen Organisasi Modern untuk efisiensi kepengurusan dan transparansi program kerja.</p>
+            </div>
+            <div class="footer-section">
+                <h4>Navigasi Cepat</h4>
+                <ul>
+                    <li><a href="#"
+                            onclick="navigateTo('dashboard', () => loadDefaultLanding(null, GLOBAL_USER), event)">Home</a>
+                    </li>
+                    <li><a href="#" onclick="navigateTo('about', () => loadAboutPage(), event)">Tentang Kami</a></li>
+                    <li><a href="#" onclick="navigateTo('help', () => loadHelpPage(), event)">Pusat Bantuan</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Hubungi Kami</h4>
+                <p>Email: <a href="mailto:pangeranvalerensco@gmail.com"class="footer-link">pangeranvalerensco@gmail.com</a></p>
+                <p>WhatsApp: <a href="https://wa.me/6282181296229" target="_blank" class="footer-link">+62 821-8129-6229</a></p>
+                <p>Telepon: <a href="tel:+6282275065026" class="footer-link">+62 822-7506-5026</a></p>
+                <p>Lokasi: Bandung, Indonesia</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2025 Struktura - Developed by <b>Pangeran Valerensco Rivaldi Hutabarat</b>. All Rights Reserved.
+        </div>
+    </footer>
+
     <script th:src="@{/js/auth-init.js}"></script>
-    <script th:src="@{/js/dashboard.js}"></script>
+    <script th:src="@{/js/struktura.js}"></script>
 </body>
 
 </html>
