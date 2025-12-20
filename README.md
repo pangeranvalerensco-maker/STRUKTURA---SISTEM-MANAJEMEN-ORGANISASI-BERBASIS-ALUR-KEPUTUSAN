@@ -80,7 +80,7 @@ Aplikasi ini mengelola program kerja melalui 5 tahapan status yang ketat:
 
 <p align="center">
   <img src="https://img.shields.io/badge/Status-Mahasiswa-blue?style=for-the-badge" alt="Status">
-  <img src="https://img.shields.io/badge/Program-Beasiswa_Bandung-gold?style=for-the-badge" alt="Program">
+  <img src="https://img.shields.io/badge/Role-Programmer-gold?style=for-the-badge" alt="Role">
 </p>
 
 Halo! Saya **Pangeran Valerensco Rivaldi Hutabarat**, pengembang dibalik aplikasi **Struktura**. Saya adalah mahasiswa **Teknik Informatika** di **Universitas Nasional PASIM Bandung**. Sebagai penerima **Program Beasiswa Bandung**, saya berkomitmen untuk menciptakan solusi digital yang bermanfaat bagi masyarakat dan komunitas organisasi.
