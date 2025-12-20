@@ -77,6 +77,26 @@ Aplikasi ini mengelola program kerja melalui 5 tahapan status yang ketat:
 ---
 
 ## 👨‍💻 Author & Developer
-**Pangeran Valerensco Rivaldi Hutabarat**
-- *S1 Teknik Informatika*
-- Fokus Pengembangan: Sistem Informasi Manajemen & Arsitektur Web.
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Status-Mahasiswa-blue?style=for-the-badge" alt="Status">
+  <img src="https://img.shields.io/badge/Program-Beasiswa_Bandung-gold?style=for-the-badge" alt="Program">
+</p>
+
+Halo! Saya **Pangeran Valerensco Rivaldi Hutabarat**, pengembang dibalik aplikasi **Struktura**. Saya adalah mahasiswa **Teknik Informatika** di **Universitas Nasional PASIM Bandung**. Sebagai penerima **Program Beasiswa Bandung**, saya berkomitmen untuk menciptakan solusi digital yang bermanfaat bagi masyarakat dan komunitas organisasi.
+
+### 🏫 Akademik & Fokus
+- **Institusi**: Universitas Nasional PASIM Bandung
+- **Program**: Program Beasiswa Pemberdayaan Umat Berkelanjutan (PUB)
+- **Fokus Keahlian**: Full-stack Development, Software Architecture, & UI/UX Design.
+
+### 🌐 Media Sosial & Kontak
+Mari terhubung dan berdiskusi lebih lanjut mengenai teknologi atau kolaborasi proyek:
+
+- **Instagram**: [@pangeranvalerensco](https://instagram.com/pangeranvalerensco)
+- **Facebook**: [Pangeran Valerensco](https://facebook.com/pangeranvalerensco)
+- **YouTube**: [Pangeran Valerensco](https://youtube.com/@pangeranvalerensco)
+- **Email**: [pangeranvalerensco@gmail.com](mailto:pangeranvalerensco@gmail.com)
+- **WhatsApp**: [+62 821-8129-6229](https://wa.me/6282181296229)
+
+---
