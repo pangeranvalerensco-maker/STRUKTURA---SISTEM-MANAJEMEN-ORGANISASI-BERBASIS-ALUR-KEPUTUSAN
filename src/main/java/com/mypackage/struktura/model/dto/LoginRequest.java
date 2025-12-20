@@ -1,25 +1,13 @@
 package com.mypackage.struktura.model.dto;
+import lombok.*;
+import jakarta.validation.constraints.*;
 
+@Getter @Setter @NoArgsConstructor
 public class LoginRequest {
-
+    @NotBlank(message = "Email harus diisi")
+    @Email(message = "Format email salah")
     private String email;
+
+    @NotBlank(message = "Password harus diisi")
     private String password;
-
-    public LoginRequest() {}
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
 }

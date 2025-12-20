@@ -6,12 +6,16 @@ import com.mypackage.struktura.model.dto.PositionUpdate;
 import com.mypackage.struktura.model.dto.MemberNumberUpdate;
 import com.mypackage.struktura.model.entity.User;
 import com.mypackage.struktura.service.UserService;
+
+import jakarta.validation.Valid;
+
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -37,7 +41,7 @@ public class UserController {
 
     // ================= REGISTER =================
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody User user) {
+    public ResponseEntity<?> register(@Valid @RequestBody User user) {
         try {
             User registeredUser = userService.registerUser(user);
             // Sukses: Beri status HTTP 201 Created
@@ -126,7 +130,7 @@ public class UserController {
 
     // ================= LOGIN =================
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
             User loggedInUser = userService.login(request.getEmail(), request.getPassword());
             // Authentication Success
@@ -245,6 +249,31 @@ public class UserController {
             userService.deleteUser(userId);
             return ResponseEntity.ok("Akun berhasil dihapus.");
         } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{pimpinanId}/handover/{targetId}")
+    public ResponseEntity<?> handoverLeadership(@PathVariable Long pimpinanId, @PathVariable Long targetId) {
+        try {
+            User newLeader = userService.handoverLeadership(pimpinanId, targetId);
+            return ResponseEntity.ok(newLeader);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/change-password")
+    public ResponseEntity<?> changePassword(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        try {
+            String oldPassword = payload.get("oldPassword");
+            String newPassword = payload.get("newPassword");
+
+            userService.changePassword(id, oldPassword, newPassword);
+
+            return ResponseEntity.ok(Map.of("message", "Password berhasil diperbarui"));
+        } catch (RuntimeException e) {
+            // Ini yang akan mengirim pesan "Password lama salah!" ke frontend
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }

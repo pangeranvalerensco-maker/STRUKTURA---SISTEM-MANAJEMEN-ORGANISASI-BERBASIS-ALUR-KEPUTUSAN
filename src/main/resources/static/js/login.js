@@ -1,3 +1,7 @@
+if (localStorage.getItem("CURRENT_USER_ID")) {
+    window.location.replace("/struktura"); 
+}
+
 // Fungsi login() dipanggil oleh onsubmit di login.html
 function login() {
     const email = document.getElementById("email").value;

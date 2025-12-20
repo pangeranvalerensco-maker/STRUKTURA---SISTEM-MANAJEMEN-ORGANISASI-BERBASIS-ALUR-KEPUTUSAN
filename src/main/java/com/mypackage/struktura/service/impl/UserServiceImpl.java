@@ -9,9 +9,11 @@ import com.mypackage.struktura.repository.NotificationRepository;
 import com.mypackage.struktura.repository.OrganizationRepository;
 import com.mypackage.struktura.repository.UserRepository;
 import com.mypackage.struktura.service.UserService;
+import com.mypackage.struktura.service.NotificationService;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
@@ -29,14 +31,20 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
     private final NotificationRepository notificationRepository; // 🛑 Tambahkan ini
+    private final NotificationService notificationService;
+    private final PasswordEncoder passwordEncoder;
 
     // Update Constructor
     public UserServiceImpl(UserRepository userRepository,
             OrganizationRepository organizationRepository,
-            NotificationRepository notificationRepository) { // 🛑 Masukkan ke sini
+            NotificationRepository notificationRepository,
+            NotificationService notificationService,
+            PasswordEncoder passwordEncoder) { // 🛑 Masukkan ke sini
         this.userRepository = userRepository;
         this.organizationRepository = organizationRepository;
         this.notificationRepository = notificationRepository; // 🛑 Inisialisasi
+        this.notificationService = notificationService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -202,18 +210,23 @@ public class UserServiceImpl implements UserService {
 
     // ================= LOGIN =================
     @Override
-    public User login(String email, String password) {
-        // 1️⃣ Temukan user berdasarkan email
+    public User login(String email, String rawPassword) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Email atau Password salah"));
 
-        // 2️⃣ Verifikasi password (tanpa enkripsi)
-        if (!user.getPassword().equals(password)) {
-            throw new RuntimeException("Email atau Password salah");
+        // 1. Cek dengan BCrypt
+        if (passwordEncoder.matches(rawPassword, user.getPassword())) {
+            return user;
         }
 
-        // 3️⃣ Berhasil login
-        return user;
+        // 2. Fallback: Cek teks biasa (untuk data lama Anda)
+        if (user.getPassword().equals(rawPassword)) {
+            // Upgrade password otomatis ke BCrypt agar ke depan lebih aman
+            user.setPassword(passwordEncoder.encode(rawPassword));
+            return userRepository.save(user);
+        }
+
+        throw new RuntimeException("Email atau Password salah");
     }
 
     // ================= ASSIGN PIMPINAN (ADMIN ONLY) =================
@@ -502,6 +515,7 @@ public class UserServiceImpl implements UserService {
             // Logika jika disetujui: Lepas dari organisasi
             targetUser.setMemberStatus(MemberStatus.NON_MEMBER);
             targetUser.setOrganization(null);
+            targetUser.setRole(Role.ANGGOTA);
             targetUser.setPosition(null);
             targetUser.setMemberNumber(null);
             targetUser.setApplicationReason(null);
@@ -539,5 +553,56 @@ public class UserServiceImpl implements UserService {
 
         // 🛑 3. Hapus User
         userRepository.delete(user);
+    }
+
+    @Override
+    @Transactional
+    public User handoverLeadership(Long currentPimpinanId, Long targetMemberId) {
+        User currentPimpinan = getUserById(currentPimpinanId); //
+        User targetMember = getUserById(targetMemberId); //
+
+        if (!currentPimpinan.getOrganization().getId().equals(targetMember.getOrganization().getId())) {
+            throw new RuntimeException("User harus berada dalam organisasi yang sama");
+        }
+
+        // 1. Proses Pertukaran Jabatan
+        targetMember.setRole(Role.PIMPINAN);
+        targetMember.setPosition("Ketua Umum (Hasil Handover)");
+
+        currentPimpinan.setRole(Role.ANGGOTA);
+        currentPimpinan.setPosition("Mantan Pimpinan / Anggota");
+
+        userRepository.save(currentPimpinan);
+        User newLeader = userRepository.save(targetMember);
+
+        // 2. Kirim Notifikasi ke Seluruh Admin
+        notificationService.sendNotificationToAllAdmins(
+                "HANDOVER_INFO: Pimpinan organisasi '" + newLeader.getOrganization().getName() +
+                        "' telah beralih dari " + currentPimpinan.getName() + " ke " + newLeader.getName());
+
+        return newLeader;
+    }
+
+    @Override
+    @Transactional
+    public User changePassword(Long userId, String oldPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User tidak ditemukan"));
+
+        // Cek password lama: Mendukung data lama (teks biasa) atau data baru (BCrypt)
+        boolean isOldPasswordCorrect = passwordEncoder.matches(oldPassword, user.getPassword()) ||
+                user.getPassword().equals(oldPassword);
+
+        if (!isOldPasswordCorrect) {
+            throw new RuntimeException("Password lama salah!");
+        }
+
+        if (newPassword.length() < 6) {
+            throw new RuntimeException("Password baru minimal 6 karakter.");
+        }
+
+        // Simpan password baru dalam format hash BCrypt
+        user.setPassword(passwordEncoder.encode(newPassword));
+        return userRepository.save(user);
     }
 }

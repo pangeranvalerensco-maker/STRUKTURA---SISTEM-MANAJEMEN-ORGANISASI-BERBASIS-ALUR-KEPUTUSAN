@@ -2,8 +2,13 @@ package com.mypackage.struktura.controller;
 
 import com.mypackage.struktura.model.entity.Organization;
 import com.mypackage.struktura.model.entity.User;
+import com.mypackage.struktura.model.entity.MemberStatus;
 import com.mypackage.struktura.service.OrganizationService;
 import com.mypackage.struktura.service.UserService;
+
+import jakarta.validation.Valid;
+
+import com.mypackage.struktura.service.NotificationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,21 +23,68 @@ public class OrganizationController {
 
     private final OrganizationService organizationService;
     private final UserService userService;
+    private final NotificationService notificationService;
 
-    public OrganizationController(OrganizationService organizationService, UserService userService) {
+    public OrganizationController(OrganizationService organizationService, UserService userService,
+            NotificationService notificationService) {
         this.organizationService = organizationService;
         this.userService = userService;
+        this.notificationService = notificationService;
     }
 
     // ================= CREATE ORGANIZATION (ADMIN ONLY) =================
+    // @PostMapping
+    // public ResponseEntity<?> createOrganization(@Valid @RequestBody Organization
+    // org, @RequestParam Long creatorId) {
+    // // 1. Simpan Organisasi Baru
+    // Organization savedOrg = organizationService.createOrganization(org);
+    // User creator = userService.getUserById(creatorId);
+
+    // if (creator == null) {
+    // return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message",
+    // "User tidak ditemukan"));
+    // }
+
+    // // 🛑 LOGIKA PROTEKSI: Jika user sudah punya organisasi, cegah pembuatan baru
+    // if (creator.getOrganization() != null) {
+    // return ResponseEntity.badRequest().body(Map.of("message", "Anda sudah
+    // terdaftar di organisasi lain."));
+    // }
+
+    // if (!creator.getRole().name().equals("ADMIN")) {
+    // creator.setOrganization(savedOrg);
+    // creator.setRole(com.mypackage.struktura.model.entity.Role.PIMPINAN);
+    // creator.setMemberStatus(MemberStatus.ACTIVE);
+    // creator.setPosition("Ketua Umum / Founder");
+    // userService.updateUser(creator.getId(), creator);
+    // notificationService.sendNotificationToAllAdmins("ORGANISASI_BARU: " +
+    // creator.getName()
+    // + " telah mendaftarkan organisasi baru: " + savedOrg.getName());
+
+    // // 🛑 KEMBALIKAN OBJEK AGAR TIDAK ERROR JSON
+    // return ResponseEntity.ok(savedOrg);
+    // }
+
+    // notificationService
+    // .sendNotificationToAllAdmins("NEW_ORG_REQUEST:" + savedOrg.getId() + ":" +
+    // savedOrg.getName());
+
+    // Map<String, String> response = new HashMap<>();
+    // response.put("message", "Organisasi berhasil didaftarkan. Anda sekarang
+    // Pimpinan.");
+    // return ResponseEntity.ok(response);
+    // }
+
     @PostMapping
-    public ResponseEntity<?> createOrganization(@RequestBody Organization organization) {
+    public ResponseEntity<?> createOrganization(@Valid @RequestBody Organization org, @RequestParam Long creatorId) {
         try {
-            Organization createdOrg = organizationService.createOrganization(organization);
-            return new ResponseEntity<>(createdOrg, HttpStatus.CREATED);
+            // Semua pengecekan terjadi di dalam service ini
+            Organization savedOrg = organizationService.createOrganization(org, creatorId);
+            return ResponseEntity.ok(savedOrg);
         } catch (RuntimeException e) {
-            // Error validasi atau duplikasi nama
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            // Menangkap error "Anda sudah terdaftar..." atau "User tidak ditemukan" dari
+            // Service
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
@@ -53,7 +105,6 @@ public class OrganizationController {
     }
 
     // ================= GET ALL ORGANIZATIONS (PUBLIC) =================
-    // ================= GET ALL ORGANIZATIONS (PUBLIC) =================
     @GetMapping // Rute: /api/organizations
     public ResponseEntity<?> getAllOrganizations() {
         // 🛑 PERBAIKAN: Fungsi ini hanya dipanggil jika frontend TIDAK menggunakan
@@ -65,9 +116,6 @@ public class OrganizationController {
     }
 
     // ================= GET ORGANIZATION BY ID (PUBLIC) =================
-    // ...
-
-    // 🛑 PERBAIKAN UTAMA DI SINI (Rute dan Model Pengembalian)
     @GetMapping("/search") // Rute: /api/organizations/search
     public ResponseEntity<?> searchOrganizations(
             @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
@@ -143,7 +191,7 @@ public class OrganizationController {
     public ResponseEntity<?> updateOrganization(
             @PathVariable Long id,
             @RequestParam Long pimpinanId,
-            @RequestBody Organization updatedData) {
+            @Valid @RequestBody Organization updatedData) {
         try {
             // Memanggil method update yang sudah ada di service Anda
             Organization org = organizationService.updateOrganization(id, updatedData, pimpinanId);
@@ -151,5 +199,25 @@ public class OrganizationController {
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
+    }
+
+    @PostMapping("/{id}/request-delete")
+    public ResponseEntity<?> requestDelete(@PathVariable Long id, @RequestParam Long pimpinanId,
+            @RequestBody Map<String, String> body) {
+        String reason = body.get("reason");
+        Organization org = organizationService.getOrganizationById(id);
+        User pimpinan = userService.getUserById(pimpinanId);
+
+        // Kirim notifikasi ke Admin
+        notificationService.sendNotificationToAllAdmins("REQUEST_HAPUS: Pimpinan " + pimpinan.getName() +
+                " meminta penghapusan organisasi " + org.getName() + ". Alasan: " + reason);
+
+        return ResponseEntity.ok(Map.of("message", "Permintaan hapus telah dikirim ke Admin."));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteOrganization(@PathVariable Long id, @RequestParam Long adminId) {
+        organizationService.deleteOrganization(id, adminId);
+        return ResponseEntity.ok(Map.of("message", "Organisasi berhasil dihapus"));
     }
 }

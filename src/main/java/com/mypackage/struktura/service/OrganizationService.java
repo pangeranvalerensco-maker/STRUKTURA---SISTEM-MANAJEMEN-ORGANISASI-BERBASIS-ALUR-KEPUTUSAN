@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface OrganizationService {
 
-    Organization createOrganization(Organization organization);
+    Organization createOrganization(Organization organization, Long creatorId);
 
     List<Organization> getAllOrganizations();
 
@@ -21,4 +21,6 @@ public interface OrganizationService {
     );
 
     Organization updateOrganization(Long orgId, Organization updatedData, Long pimpinanId);
+
+    void deleteOrganization(Long orgId, Long adminId);
 }

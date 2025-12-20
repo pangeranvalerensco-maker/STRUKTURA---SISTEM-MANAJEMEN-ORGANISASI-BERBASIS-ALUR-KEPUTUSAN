@@ -961,3 +961,9 @@ a.member-link:hover,
     text-decoration: underline !important;
     color: #4e9eff;
 }
+
+.org-link-admin:hover {
+    text-decoration: underline !important;
+    color: #1a365d !important;
+}
+

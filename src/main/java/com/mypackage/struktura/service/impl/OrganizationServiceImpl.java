@@ -3,31 +3,66 @@ package com.mypackage.struktura.service.impl;
 import com.mypackage.struktura.model.entity.Organization;
 import com.mypackage.struktura.model.entity.Role;
 import com.mypackage.struktura.model.entity.User;
+import com.mypackage.struktura.model.entity.MemberStatus;
 import com.mypackage.struktura.repository.OrganizationRepository;
 import com.mypackage.struktura.repository.UserRepository;
 import com.mypackage.struktura.service.OrganizationService;
+import com.mypackage.struktura.service.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Sort;
 
 import java.time.LocalDate;
 import java.util.List;
+import jakarta.transaction.Transactional;
 
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
 
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
-    public OrganizationServiceImpl(OrganizationRepository organizationRepository, UserRepository userRepository) {
+    public OrganizationServiceImpl(OrganizationRepository organizationRepository, UserRepository userRepository, NotificationService notificationService) {
         this.organizationRepository = organizationRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
-    public Organization createOrganization(Organization organization) {
+    @Transactional
+    public Organization createOrganization(Organization organization, Long creatorId) {
+        // 1. Cari user dan validasi keberadaannya
+        User creator = userRepository.findById(creatorId)
+                .orElseThrow(() -> new RuntimeException("User tidak ditemukan"));
+
+        // 2. LOGIKA PROTEKSI: Pindahkan dari Controller ke sini
+        if (creator.getOrganization() != null) {
+            throw new RuntimeException("Anda sudah terdaftar di organisasi lain.");
+        }
+
+        // 3. Set default value organisasi
         organization.setCreatedDate(LocalDate.now());
-        organization.setStatus("ACTIVE"); // default saat dibuat
-        return organizationRepository.save(organization);
+        organization.setStatus("ACTIVE");
+        Organization savedOrg = organizationRepository.save(organization);
+
+        // 4. Logika Update User (Jika bukan ADMIN, jadikan PIMPINAN)
+        if (!creator.getRole().name().equals("ADMIN")) {
+            creator.setOrganization(savedOrg);
+            creator.setRole(Role.PIMPINAN);
+            creator.setMemberStatus(MemberStatus.ACTIVE);
+            creator.setPosition("Ketua Umum / Founder");
+            userRepository.save(creator); // Langsung pakai repository di dalam service
+
+            // Kirim notifikasi
+            notificationService.sendNotificationToAllAdmins("ORGANISASI_BARU: " + creator.getName()
+                    + " telah mendaftarkan organisasi baru: " + savedOrg.getName());
+        } else {
+            // Logika jika yang membuat adalah ADMIN
+            notificationService
+                    .sendNotificationToAllAdmins("NEW_ORG_REQUEST:" + savedOrg.getId() + ":" + savedOrg.getName());
+        }
+
+        return savedOrg;
     }
 
     @Override
@@ -85,4 +120,59 @@ public class OrganizationServiceImpl implements OrganizationService {
         return organizationRepository.save(org);
     }
 
+    @Override
+    @Transactional
+    public void deleteOrganization(Long orgId, Long adminId) {
+        // 1. Validasi Admin
+        User admin = userRepository.findById(adminId)
+                .orElseThrow(() -> new RuntimeException("Admin tidak ditemukan"));
+        if (!admin.getRole().name().equals("ADMIN")) {
+            throw new RuntimeException("Hanya Admin yang boleh menghapus organisasi.");
+        }
+
+        // 2. Ambil Organisasi
+        Organization org = organizationRepository.findById(orgId)
+                .orElseThrow(() -> new RuntimeException("Organisasi tidak ditemukan"));
+
+        // 3. Cek Jumlah Anggota Aktif
+        List<User> members = userRepository.findByOrganizationIdAndMemberStatus(org.getId(), MemberStatus.ACTIVE);
+        if (!members.isEmpty()) {
+            throw new RuntimeException("Organisasi tidak bisa dihapus karena masih memiliki anggota aktif ("
+                    + members.size() + " orang).");
+        }
+
+        // 4. Hapus (Logika database akan menghapus record organisasi)
+        organizationRepository.delete(org);
+    }
+
+    @Transactional
+    public User processResignation(Long pimpinanId, Long targetUserId, String action) {
+        User target = userRepository.findById(targetUserId).orElseThrow();
+
+        if ("APPROVE".equals(action)) {
+            if (target.getRole() == Role.PIMPINAN) {
+                // Cek jumlah seluruh anggota di organisasi tersebut
+                List<User> allMembers = userRepository.findByOrganizationId(target.getOrganization().getId());
+
+                // Jika ada lebih dari 1 orang dan belum ada pimpinan baru
+                if (allMembers.size() > 1) {
+                    List<User> otherLeaders = userRepository
+                            .findByOrganizationIdAndRole(target.getOrganization().getId(), Role.PIMPINAN);
+                    if (otherLeaders.size() <= 1) {
+                        throw new RuntimeException(
+                                "Gagal: Masih ada anggota lain. Harap 'Serah Terima Jabatan' atau 'Hapus Organisasi' terlebih dahulu.");
+                    }
+                }
+            }
+
+            // Reset status user menjadi NON_MEMBER
+            target.setOrganization(null);
+            target.setRole(Role.ANGGOTA);
+            target.setMemberStatus(com.mypackage.struktura.model.entity.MemberStatus.NON_MEMBER);
+            target.setPosition(null);
+
+            return userRepository.save(target);
+        }
+        return target;
+    }
 }

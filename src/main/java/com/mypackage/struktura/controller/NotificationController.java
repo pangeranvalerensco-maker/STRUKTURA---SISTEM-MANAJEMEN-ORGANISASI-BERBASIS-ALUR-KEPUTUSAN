@@ -1,7 +1,7 @@
 package com.mypackage.struktura.controller;
 
 import com.mypackage.struktura.model.entity.Notification;
-import com.mypackage.struktura.repository.NotificationRepository;
+import com.mypackage.struktura.service.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,34 +11,28 @@ import java.util.List;
 @RequestMapping("/api/notifications")
 public class NotificationController {
 
-    private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService; // 🛑 Panggil Service, bukan Repository
 
-    public NotificationController(NotificationRepository notificationRepository) {
-        this.notificationRepository = notificationRepository;
+    public NotificationController(NotificationService notificationService) {
+        this.notificationService = notificationService;
     }
 
-    // Mendapatkan semua notifikasi untuk user tertentu
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<Notification>> getUserNotifications(@PathVariable Long userId) {
-        List<Notification> notifications = notificationRepository.findByRecipientIdOrderByCreatedAtDesc(userId);
-        return ResponseEntity.ok(notifications);
+        // Logika pengambilan data dipindah ke Service
+        return ResponseEntity.ok(notificationService.getUserNotifications(userId));
     }
 
-    // Mendapatkan jumlah notifikasi yang belum dibaca
     @GetMapping("/user/{userId}/unread-count")
     public ResponseEntity<Long> getUnreadCount(@PathVariable Long userId) {
-        long count = notificationRepository.countByRecipientIdAndIsReadFalse(userId);
-        return ResponseEntity.ok(count);
+        // Logika hitung data dipindah ke Service
+        return ResponseEntity.ok(notificationService.getUnreadCount(userId));
     }
 
-    // Menandai semua notifikasi sebagai terbaca (Opsional)
     @PutMapping("/user/{userId}/read-all")
     public ResponseEntity<?> markAllAsRead(@PathVariable Long userId) {
-        List<Notification> notifications = notificationRepository.findByRecipientIdOrderByCreatedAtDesc(userId);
-        for (Notification n : notifications) {
-            n.setRead(true);
-        }
-        notificationRepository.saveAll(notifications);
+        // 🛑 Logika for-loop dipindah ke Service
+        notificationService.markAllAsRead(userId);
         return ResponseEntity.ok().build();
     }
 }

@@ -1,13 +1,10 @@
 package com.mypackage.struktura.model.dto;
 
+import lombok.NoArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter @Setter @NoArgsConstructor
 public class JoinRequest {
     private String reason;
-    
-    public JoinRequest() {}
-    public String getReason() {
-        return reason;
-    }
-    public void setReason(String reason) {
-        this.reason = reason;
-    }
 }

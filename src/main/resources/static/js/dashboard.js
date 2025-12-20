@@ -73,10 +73,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadNotificationPage();
             } else if (currentHash === '#orgList' || currentHash === '#org-list') {
                 loadOrgListPage(null, user);
-            } else if (currentHash === '#kelola-org' && user.role === 'PIMPINAN') {
+            } else if (currentHash === '#kelola-org' && user.role === 'PIMPINAN' && user.organization) {
                 // 🛑 Tambahkan ini agar refresh di halaman Kelola Org berhasil
                 loadEditOrganizationPage();
-            } else if (currentHash === '#kelola' && user.role === 'PIMPINAN') {
+            } else if (currentHash === '#kelola' && user.role === 'PIMPINAN' && user.organization) {
                 loadPimpinanDashboard(user);
             } else if (currentHash.startsWith('#organization-')) {
                 // 🛑 FIX: Tambahkan penanganan untuk Profil Organisasi saat refresh
@@ -86,6 +86,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 🛑 SOLUSI: Tambahkan ini agar saat refresh profil anggota tetap di tempat
                 const targetUserId = currentHash.split('-')[1];
                 loadUserProfile(targetUserId, null);
+            } else if (currentHash === '#create-org') {
+                if (GLOBAL_USER.role !== 'ADMIN' && (GLOBAL_USER.memberStatus === 'NON_MEMBER' || !GLOBAL_USER.organization)) {
+                    loadCreateOrganizationPage();
+                } else {
+                    showToast("Anda sudah terdaftar di organisasi!", "error");
+                    loadDefaultLanding(null, GLOBAL_USER);
+                }
+            } else if (currentHash === '#handover') {
+                // Hanya izinkan handover jika role-nya PIMPINAN
+                if (user.role === 'PIMPINAN' && user.organization) {
+                    loadHandoverPage();
+                } else {
+                    loadDefaultLanding(null, user);
+                }
             } else {
                 updatePageTitle("Dashboard Utama");
                 loadDefaultLanding(null, user);
@@ -100,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderSidebar(user) {
     const sideInfoArea = document.getElementById("side-info-area");
     const orgName = user.organization ? user.organization.name : 'Belum Ada';
-    const hasOrg = user.organization !== null; //
+    const hasOrg = user.organization !== null;
 
     sideInfoArea.innerHTML = `
         <div class="card-section">
@@ -122,7 +136,7 @@ function renderSidebar(user) {
                     Pemberitahuan <span id="notifBadge" class="badge-notif" style="display:none;">0</span>
                 </a>
             </li>
-            ${user.memberStatus === "ACTIVE" ?
+            ${user.memberStatus === "ACTIVE" || GLOBAL_USER.role !== 'ADMIN' ?
             `<li><a href="#" onclick="navigateTo('proker', () => loadProkerPage(null), event)">Program Kerja</a></li>` : ''
         }
         </ul>
@@ -131,15 +145,15 @@ function renderSidebar(user) {
 
     const mainMenu = document.getElementById("main-menu");
 
-    if (user.role === "PIMPINAN") {
+    if (user.role === "PIMPINAN" && hasOrg) {
         mainMenu.innerHTML += `
-    <li>
-        <a href="#" onclick="LAST_PAGE_BEFORE_PROFILE = window.location.hash.replace('#',''); navigateTo('kelola-org', () => loadEditOrganizationPage(), event)">
-            Kelola Organisasi
-        </a>
-    </li>
-    <li><a href="#" onclick="navigateTo('kelola', () => loadPimpinanDashboard(GLOBAL_USER), event)">Kelola Anggota</a></li>
-`;
+                                <li>
+                                    <a href="#" onclick="LAST_PAGE_BEFORE_PROFILE = window.location.hash.replace('#',''); navigateTo('kelola-org', () => loadEditOrganizationPage(), event)">
+                                        Kelola Organisasi
+                                    </a>
+                                </li>
+                                <li><a href="#" onclick="navigateTo('kelola', () => loadPimpinanDashboard(GLOBAL_USER), event)">Kelola Anggota</a></li>
+                            `;
     }
 
     fetchUnreadNotifCount();
@@ -198,10 +212,71 @@ function loadProfilePage(event) {
                     <button onclick="loadEditProfileForm(GLOBAL_USER)" class="btn-primary">Edit Profil</button>
                     ${resignBtn}
                     <button ${deleteBtnAttr} class="btn-danger-outline">Hapus Akun</button>
+                    <button onclick="openChangePasswordModal()" class="btn-secondary" style="background: #4a5568; color: white;">
+                        🔒 Ganti Password Akun
+                    </button>
+                    </div>
+            </div>
+        </div>
+    `;
+}
+
+function openChangePasswordModal() {
+    const modalHtml = `
+        <div id="changePasswordModal" class="confirm-overlay">
+            <div class="confirm-box" style="width: 400px;">
+                <h4>Ganti Password</h4>
+                <div style="text-align: left; margin-top: 15px;">
+                    <label>Password Lama:</label>
+                    <input type="password" id="oldPassword" class="form-input" style="width:100%; margin-bottom:10px;">
+                    <label>Password Baru:</label>
+                    <input type="password" id="newPassword" class="form-input" style="width:100%; margin-bottom:10px;">
+                    <label>Konfirmasi Password Baru:</label>
+                    <input type="password" id="confirmNewPassword" class="form-input" style="width:100%;">
+                </div>
+                <div class="confirm-buttons" style="margin-top: 20px;">
+                    <button onclick="submitChangePassword()" class="btn-primary">Simpan Password</button>
+                    <button onclick="document.getElementById('changePasswordModal').remove()" class="btn-secondary">Batal</button>
                 </div>
             </div>
         </div>
     `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function submitChangePassword() {
+    const oldPass = document.getElementById('oldPassword').value;
+    const newPass = document.getElementById('newPassword').value;
+    const confirmPass = document.getElementById('confirmNewPassword').value;
+
+    if (newPass !== confirmPass) {
+        return showToast("Konfirmasi password baru tidak cocok!", "error");
+    }
+
+    if (newPass.length < 6) {
+        return showToast("Password baru minimal 6 karakter!", "error");
+    }
+
+    const userId = localStorage.getItem("CURRENT_USER_ID");
+
+    fetch(`/api/users/${userId}/change-password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            oldPassword: oldPass,
+            newPassword: newPass
+        })
+    })
+    .then(async res => {
+        if (res.ok) {
+            showToast("Password berhasil diperbarui!", "success");
+            document.getElementById('changePasswordModal').remove();
+        } else {
+            const err = await res.text();
+            showToast(err || "Gagal ganti password", "error");
+        }
+    })
+    .catch(err => showToast("Terjadi kesalahan sistem", "error"));
 }
 
 function loadEditProfileForm(user) {
@@ -400,27 +475,55 @@ function loadOrganizationList() {
             if (!res.ok) throw new Error("Gagal memuat daftar organisasi.");
             return res.json();
         })
-        .then(organizations => {
+        .then(async organizations => {
             tableBody.innerHTML = '';
-            organizations.forEach(org => {
+            for (const org of organizations) {
+                // Fetch detail untuk mendapatkan memberCount
+                const detailRes = await fetch(`/api/organizations/${org.id}/details`);
+                const detailData = await detailRes.json();
+                const memberCount = detailData.memberCount || 0;
+
                 tableBody.innerHTML += `
                     <tr>
                         <td>${org.id}</td>
-                        <td><a href="#" class="org-link" onclick="loadOrganizationProfile(${org.id}, event)">
-                                    ${org.name}
-                                </a></td>
+                        <td>
+                            <a href="#" class="org-link-admin" onclick="loadOrganizationProfile(${org.id}, event)" 
+                               style="color: #2b6cb0; font-weight: bold; text-decoration: none;">
+                               ${org.name}
+                            </a>
+                        </td>
+                        <td style="text-align:center;"><span class="badge-count">${memberCount} Anggota</span></td>
                         <td>${org.status}</td>
                         <td>
-                            <button onclick="openAssignPimpinanModal(${org.id}, '${org.name}')">Assign Pimpinan</button>
+                            <div style="display:flex; gap:5px;">
+                                <button onclick="openAssignPimpinanModal(${org.id}, '${org.name}')" class="btn-primary btn-small">Assign</button>
+                                <button onclick="confirmDeleteOrg(${org.id}, '${org.name}', ${memberCount})" class="btn-danger btn-small">Hapus</button>
+                            </div>
                         </td>
                     </tr>
                 `;
-            });
-
+            }
         })
         .catch(err => {
             tableBody.innerHTML = `<tr><td colspan="4" style="color: red;">[Error]: ${err.message}</td></tr>`;
         });
+}
+
+function confirmDeleteOrg(orgId, orgName) {
+    customConfirm(`⚠️ Apakah Anda yakin ingin menghapus organisasi "${orgName}"? Tindakan ini permanen.`, () => {
+        const adminId = GLOBAL_USER.id;
+        fetch(`/api/organizations/${orgId}?adminId=${adminId}`, { method: 'DELETE' })
+            .then(async res => {
+                if (res.ok) {
+                    showToast("Organisasi berhasil dihapus.", "success");
+                    loadOrganizationList(); // Refresh tabel
+                } else {
+                    const errorMsg = await res.text();
+                    showToast("Gagal: " + errorMsg, "error");
+                }
+            })
+            .catch(err => showToast("Error: " + err.message, "error"));
+    });
 }
 
 function loadEditOrganizationPage() {
@@ -450,6 +553,10 @@ function loadEditOrganizationPage() {
                 <div class="form-group">
                     <label>Nama Organisasi</label>
                     <input type="text" id="editOrgName" value="${org.name || ''}" required>
+                </div>
+                <div class="form-group">
+                    <label>Periode Kepengurusan</label>
+                    <input type="text" id="editOrgPeriod" value="${org.period || ''}" placeholder="Contoh: 2024/2025">
                 </div>
                 <div class="form-group">
                     <label>Tanggal Berdiri</label>
@@ -495,10 +602,52 @@ function loadEditOrganizationPage() {
                 <button type="submit" class="btn-success">Simpan Perubahan</button>
                 <button type="button" onclick="goBackFromProfile()" class="btn-secondary">Batal</button>
             </div>
+
+            <div class="danger-zone" style="margin-top: 50px; border: 1px solid #feb2b2; padding: 20px; border-radius: 8px; background: #fff5f5;">
+                <h4 style="color: #c53030;">Zona Bahaya: Pembubaran Organisasi</h4>
+                <p>Jika organisasi sudah tidak aktif, Anda dapat mengajukan penghapusan ke Admin.</p>
+                <button onclick="openRequestDeleteOrgModal()" class="btn-danger">Ajukan Hapus Organisasi</button>
+            </div>
         </form>
     `;
 
     document.getElementById('fullOrgEditForm').addEventListener('submit', handleFullOrgUpdate);
+}
+
+function openRequestDeleteOrgModal() {
+    const modalHtml = `
+        <div id="deleteOrgModal" class="confirm-overlay">
+            <div class="confirm-box">
+                <h4>Ajukan Penghapusan Organisasi</h4>
+                <p>Berikan alasan kuat mengapa organisasi ini harus dihapus dari sistem:</p>
+                <textarea id="deleteOrgReason" rows="4" style="width:100%; margin:15px 0; padding:10px;"></textarea>
+                <div class="confirm-buttons">
+                    <button onclick="submitDeleteRequest()" class="btn-danger">Kirim Permintaan</button>
+                    <button onclick="document.getElementById('deleteOrgModal').remove()" class="btn-secondary">Batal</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function submitDeleteRequest() {
+    const reason = document.getElementById('deleteOrgReason').value;
+    if (!reason.trim()) return showToast("Alasan wajib diisi!", "error");
+
+    const orgId = GLOBAL_USER.organization.id;
+    const pimpinanId = GLOBAL_USER.id;
+
+    fetch(`/api/organizations/${orgId}/request-delete?pimpinanId=${pimpinanId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason })
+    })
+        .then(res => res.json())
+        .then(data => {
+            showToast(data.message, "success");
+            document.getElementById('deleteOrgModal').remove();
+        });
 }
 
 function handleFullOrgUpdate(event) {
@@ -508,6 +657,7 @@ function handleFullOrgUpdate(event) {
 
     const updatedData = {
         name: document.getElementById('editOrgName').value,
+        period: document.getElementById('editOrgPeriod').value,
         establishedDate: document.getElementById('editOrgDate').value,
         field: document.getElementById('editOrgField').value,
         scope: document.getElementById('editOrgScope').value,
@@ -551,22 +701,12 @@ function loadAdminDashboard(user) {
     container.innerHTML = `
         <h3>Area Admin: Sistem Struktura</h3>
         <p id="adminMessage" style="margin-bottom: 15px;"></p>
-        <hr>
-        
-        <div class="card-section">
-            <h4>Buat Organisasi Baru</h4>
-            <form id="createOrgForm">
-                <input type="text" id="orgName" placeholder="Nama Organisasi" required style="width: 100%; padding: 8px; margin-bottom: 10px;">
-                <textarea id="orgDescription" placeholder="Deskripsi Singkat (Opsional)" style="width: 100%; padding: 8px; margin-bottom: 10px;"></textarea>
-                <button type="submit">Buat Organisasi</button>
-            </form>
-        </div>
 
         <div class="card-section" style="margin-top: 20px;">
             <h4>Kelola Organisasi & Tetapkan Pimpinan</h4>
             <table id="orgListTable" class="data-table">
                 <thead>
-                    <tr><th>ID</th><th>Nama Organisasi</th><th>Status</th><th>Aksi</th></tr>
+                    <tr><th>ID</th><th>Nama Organisasi<th>Jumlah Anggota</th></th><th>Status</th><th>Aksi</th></tr>
                 </thead>
                 <tbody><tr><td colspan="4">Memuat daftar organisasi...</td></tr></tbody>
             </table>
@@ -584,7 +724,7 @@ function loadAdminDashboard(user) {
         </div>
     `;
 
-    document.getElementById('createOrgForm').addEventListener('submit', handleCreateOrganization);
+    // document.getElementById('createOrgForm').addEventListener('submit', handleCreateOrganization);
     loadOrganizationList();
 }
 
@@ -688,9 +828,9 @@ function loadPimpinanDashboard(user) {
     fetch(`/api/users/organization/${orgId}/active`)
         .then(res => res.json())
         .then(members => {
-           // Simpan ke variabel global agar bisa di-sort/filter/paginasi di JS
-            CURRENT_ACTIVE_MEMBERS = members; 
-            
+            // Simpan ke variabel global agar bisa di-sort/filter/paginasi di JS
+            CURRENT_ACTIVE_MEMBERS = members;
+
             const activeOnly = members.filter(m => m.memberStatus === 'ACTIVE');
             const totalActive = activeOnly.length;
             const resignRequests = members.filter(m => m.memberStatus === 'RESIGN_REQUESTED');
@@ -701,7 +841,10 @@ function loadPimpinanDashboard(user) {
 
             // 🛑 2. Pasang HTML ke Container
             container.innerHTML = `
-                <h3>Manajemen Anggota: ${user.organization.name}</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>Manajemen Anggota: ${user.organization.name}</h3>
+                    <button onclick="loadHandoverPage()" class="btn-primary" style="padding: 10px 20px;">🤝 Serah Terima Jabatan</button>
+                </div>
                 <hr>
                 
                 <div class="card-section">
@@ -748,6 +891,7 @@ function loadPimpinanDashboard(user) {
                                 <select id="activeSort" onchange="currentPage = 0; filterAndSortActiveMembers()" style="padding:8px; border-radius:5px; border:1px solid #ddd;">
                                     <option value="name-asc">Nama (A-Z)</option>
                                     <option value="name-desc">Nama (Z-A)</option>
+                                    <option value="periode">Urutkan Periode Organisasi</option>
                                     <option value="rank">Jabatan Tertinggi</option>
                                     <option value="no-anggota">No. Anggota</option>
                                     <option value="date-new">Terbaru Gabung</option>
@@ -784,7 +928,7 @@ function loadPimpinanDashboard(user) {
             // loadActive();
             loadPending(orgId);
             loadResignRequests(orgId);
-            currentPage = 0; 
+            currentPage = 0;
             filterAndSortActiveMembers();
         })
         .catch(err => {
@@ -794,6 +938,72 @@ function loadPimpinanDashboard(user) {
                 container.innerHTML = `<p class="text-error">Error: ${err.message}</p>`;
             }
         })
+}
+
+function loadHandoverPage() {
+    updatePageTitle("Serah Terima Jabatan");
+    history.pushState({ section: 'handover' }, "", "#handover");
+    const container = document.getElementById('main-content-area');
+
+    // Filter anggota aktif selain diri sendiri
+    const candidates = CURRENT_ACTIVE_MEMBERS.filter(m => m.id != GLOBAL_USER.id && m.memberStatus === 'ACTIVE');
+
+    if (candidates.length === 0) {
+        container.innerHTML = `<h3>Tidak ada anggota aktif yang tersedia untuk menjadi pengganti.</h3>
+                               <button onclick="loadPimpinanDashboard(GLOBAL_USER)" class="btn-secondary">Kembali</button>`;
+        return;
+    }
+
+    const options = candidates.map(c => `<option value="${c.id}">${c.name} - ${c.position || 'Anggota'}</option>`).join('');
+
+    container.innerHTML = `
+        <div class="header-with-action">
+            <h3>Serah Terima Jabatan Pimpinan Utama</h3>
+            <p>Gunakan halaman ini untuk mengalihkan seluruh tanggung jawab pimpinan kepada anggota lain.</p>
+        </div>
+        <hr>
+        <div class="card-section" style="max-width: 600px; margin: 20px 0;">
+            <form id="handoverFormPage">
+                <div class="form-group">
+                    <label>Pilih Anggota Pengganti:</label>
+                    <select id="targetLeaderId" class="form-control" required style="width:100%; padding:10px; margin-top:5px;">
+                        <option value="">-- Cari Nama Anggota --</option>
+                        ${options}
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-top:20px;">
+                    <label>Pesan Amanah Untuk Pimpinan Baru:</label>
+                    <textarea id="handoverNote" rows="4" placeholder="Tuliskan pesan atau arahan singkat untuk pimpinan selanjutnya..."></textarea>
+                </div>
+
+                <div class="warning-box" style="background:#fff5f5; color:#c53030; padding:15px; border-radius:8px; border-left:4px solid #e53e3e; margin:20px 0;">
+                    <strong>PENTING:</strong> Setelah menekan tombol konfirmasi, Anda akan otomatis turun menjadi <b>Anggota Biasa</b> dan kehilangan semua akses menu Kelola.
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-warning">Konfirmasi & Serah Terima</button>
+                    <button type="button" onclick="loadPimpinanDashboard(GLOBAL_USER)" class="btn-secondary">Batal</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.getElementById('handoverFormPage').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const targetId = document.getElementById('targetLeaderId').value;
+        const targetName = candidates.find(c => c.id == targetId).name;
+
+        customConfirm(`Apakah Anda benar-benar yakin ingin menyerahkan jabatan pimpinan kepada ${targetName}?`, () => {
+            fetch(`/api/users/${GLOBAL_USER.id}/handover/${targetId}`, { method: 'PUT' })
+                .then(res => {
+                    if (res.ok) {
+                        showToast("Jabatan berhasil diserahterimakan.", "success");
+                        setTimeout(() => window.location.reload(), 1500);
+                    }
+                });
+        });
+    });
 }
 
 function loadPending(orgId) {
@@ -857,10 +1067,10 @@ function filterAndSortActiveMembers() {
     // 1. FILTERING (Pencarian + Filter Bidang)
     let result = CURRENT_ACTIVE_MEMBERS.filter(u => {
         const isActive = u.memberStatus === 'ACTIVE';
-        const matchSearch = (u.name && u.name.toLowerCase().includes(keyword)) || 
-                            (u.email && u.email.toLowerCase().includes(keyword)) ||
-                            (u.memberNumber && u.memberNumber.toLowerCase().includes(keyword));
-        
+        const matchSearch = (u.name && u.name.toLowerCase().includes(keyword)) ||
+            (u.email && u.email.toLowerCase().includes(keyword)) ||
+            (u.memberNumber && u.memberNumber.toLowerCase().includes(keyword));
+
         const memberBidang = extractBidangFromPosition(u.position);
         const matchBidang = bidangFilter === "" || memberBidang === bidangFilter;
 
@@ -889,6 +1099,14 @@ function filterAndSortActiveMembers() {
             return 4; // Anggota Biasa
         };
         result.sort((a, b) => getRank(a.position) - getRank(b.position));
+    }
+    else if (sortVal === 'periode') {
+        // Karena periode ada di entitas Organization, kita akses via u.organization
+        result.sort((a, b) => {
+            const pA = a.organization ? a.organization.period : "";
+            const pB = b.organization ? b.organization.period : "";
+            return pB.localeCompare(pA); // Periode terbaru di atas
+        });
     }
 
     // 3. LOGIKA PAGINASI (Memotong array result)
@@ -938,9 +1156,8 @@ function loadActive(orgId) {
     const paginationControls = document.getElementById('paginationControls');
 
     if (!tableBody) return;
-    
-    // Setting SIZE ke 50 sesuai permintaan Anda
-    const size = 50; 
+
+    const size = 20;
     const endpoint = `/api/users/organization/${orgId}/active/search?keyword=${currentKeyword}&page=${currentPage}&size=${size}&sortBy=${currentSortBy}&sortDirection=${currentSortDirection}`;
 
     tableBody.innerHTML = `<tr><td colspan="4">Loading data (${currentPage + 1})...</td></tr>`;
@@ -968,7 +1185,9 @@ function loadActive(orgId) {
 
             users.forEach((u, index) => { // Gunakan index dari forEach
                 const rowNumber = startIndex + index + 1;
-                const showRevoke = GLOBAL_USER.id != u.id;
+                const isMe = GLOBAL_USER.id != u.id;
+                let handoverBtn = (!isMe) ? `<button onclick="confirmHandover(${u.id}, '${u.name}')" class="btn-warning btn-small">Tunjuk Pimpinan</button>` : '';
+                let revokeBtn = (!isMe) ? `<button onclick="revokeMember(${u.id})" class="btn-danger btn-small">Cabut</button>` : '';
                 const genderDisp = u.gender === 'MALE' ? 'Laki-laki' : u.gender === 'FEMALE' ? 'Perempuan' : '-';
 
                 tableBody.innerHTML += `
@@ -984,12 +1203,17 @@ function loadActive(orgId) {
                             <button onclick="openEditPositionModal(${u.id}, '${u.name}', '${u.position || 'Anggota Biasa'}')" class="btn-primary btn-small">Edit Jabatan</button>
                             <button onclick="openEditMemberNumberModal(${u.id}, '${u.name}', '${u.memberNumber || 'N/A'}')" class="btn-primary btn-small">Edit No</button>
 
-                            ${showRevoke ? `<button onclick="revokeMember(${u.id})" class="btn-danger btn-small">Cabut Anggota</button>` : ''}
+                            ${isMe ? `<button onclick="revokeMember(${u.id})" class="btn-danger btn-small">Cabut Anggota</button>` : ''}
+                            <div style="display:flex; gap:5px;">
+                                <button onclick="openEditPositionModal(${u.id}, ...)" class="btn-primary btn-small">Jabatan</button>
+                                ${handoverBtn}  
+                                ${revokeBtn}
+                            </div>
                         </td>
                     </tr>
                 `;
             });
-            
+
             renderPaginationButtons(pageData);
         })
         .catch(err => {
@@ -1154,6 +1378,8 @@ async function loadOrganizationListDashboard(event, user) {
     const container = document.getElementById('main-content-area');
     LAST_PAGE_BEFORE_PROFILE = 'org-list';
 
+    const canCreateOrg = user.memberStatus === 'NON_MEMBER' || !user.organization;
+
     // Ambil data bidang secara dinamis dari database
     let fieldOptions = "";
     try {
@@ -1166,8 +1392,11 @@ async function loadOrganizationListDashboard(event, user) {
     }
 
     container.innerHTML = `
-        <h3>Daftar Organisasi Aktif</h3>
-        <p>Anda dapat melihat daftar organisasi. Status Anda: <b>${user.memberStatus}</b>.</p>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>Daftar Organisasi Aktif</h3>
+            ${canCreateOrg ? `<button onclick="loadCreateOrganizationPage()" class="btn-success">+ Daftarkan Organisasi Baru</button>` : ''}
+        </div>
+        <p>Lihat organisasi yang tersedia atau buat organisasi Anda sendiri. Status Anda: <b>${user.memberStatus}</b>.</p>
         <hr>
 
         <div class="search-sort-controls" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
@@ -1214,7 +1443,7 @@ function loadOrgList(user) {
     // 2. Ambil elemen tableBody di awal agar bisa menampilkan status "Memuat..."
     const tableBody = document.querySelector("#organizationList tbody");
     const paginationArea = document.getElementById('orgPaginationControls');
-    
+
     if (!tableBody) return;
     tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>`;
 
@@ -1228,10 +1457,10 @@ function loadOrgList(user) {
             // 4. FILTERING (Logika Asli Anda)
             let result = organizations.filter(o => {
                 const matchStatus = o.status === "ACTIVE";
-                const matchKeyword = o.name.toLowerCase().includes(rawKeyword) || 
-                                     (o.description && o.description.toLowerCase().includes(rawKeyword));
+                const matchKeyword = o.name.toLowerCase().includes(rawKeyword) ||
+                    (o.description && o.description.toLowerCase().includes(rawKeyword));
                 const matchField = fieldFilter === "" || o.field === fieldFilter;
-                
+
                 return matchStatus && matchKeyword && matchField;
             });
 
@@ -1248,7 +1477,7 @@ function loadOrgList(user) {
             const paginated = result.slice(start, start + pageSize);
 
             tableBody.innerHTML = '';
-            
+
             if (paginated.length === 0) {
                 tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Organisasi tidak ditemukan.</td></tr>`;
                 if (paginationArea) paginationArea.innerHTML = '';
@@ -1256,10 +1485,21 @@ function loadOrgList(user) {
             }
 
             paginated.forEach(org => {
-                const isMember = user.organization && user.organization.id === org.id;
-                let actionBtn = isMember ? 
-                    `<b class="text-success">Anggota Aktif</b>` : 
-                    `<button onclick="openJoinModal(${org.id}, '${org.name}')" class="btn-success btn-small">Gabung</button>`;
+                const isMemberOfThisOrg = user.organization && user.organization.id === org.id;
+                const alreadyHasOrg = user.organization !== null;
+                const isAdmin = user.role === 'ADMIN';
+
+                let actionBtn = '';
+
+                if (isMemberOfThisOrg) {
+                    actionBtn = `<b class="text-success">Organisasi Anda</b>`;
+                } else if (isAdmin) {
+                    actionBtn = `<span class="text-muted" title="Anda Adalah Admin">Terkunci</span>`;
+                } else if (alreadyHasOrg) {
+                    actionBtn = `<span class="text-muted" title="Anda sudah memiliki organisasi">Terkunci</span>`;
+                } else {
+                    actionBtn = `<button onclick="openJoinModal(${org.id}, '${org.name}')" class="btn-success btn-small">Gabung</button>`;
+                }
 
                 tableBody.innerHTML += `
                     <tr>
@@ -1291,6 +1531,137 @@ function loadOrgList(user) {
         .catch(err => {
             tableBody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">${err.message}</td></tr>`;
         });
+}
+
+// Fungsi untuk memuat halaman form pendaftaran lengkap
+function loadCreateOrganizationPage() {
+    updatePageTitle("Daftarkan Organisasi Baru");
+    history.pushState({ section: 'create-org' }, "", "#create-org");
+    const container = document.getElementById('main-content-area');
+
+    container.innerHTML = `
+        <div class="header-with-action">
+            <h3>Daftarkan Profil Organisasi Baru</h3>
+            <p>Lengkapi data di bawah ini. Anda akan otomatis menjadi <b>Pimpinan Utama</b> setelah organisasi dibuat.</p>
+        </div>
+        <hr>
+        <form id="fullOrgCreateForm" class="profile-edit-form">
+            <div class="grid-2-col">
+                <div class="form-group">
+                    <label>Nama Organisasi</label>
+                    <input type="text" id="newOrgName" required placeholder="Masukkan nama resmi organisasi">
+                </div>
+                <div class="form-group">
+                    <label>Periode Kepengurusan</label>
+                    <input type="text" id="newOrgPeriod" value="2025/2026" required placeholder="Contoh: 2024/2025">
+                </div>
+                <div class="form-group">
+                    <label>Tanggal Berdiri</label>
+                    <input type="date" id="newOrgDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Bidang</label>
+                    <input type="text" id="newOrgField" required placeholder="Contoh: Pendidikan, IT, Sosial">
+                </div>
+                <div class="form-group">
+                    <label>Lingkup</label>
+                    <input type="text" id="newOrgScope" placeholder="Contoh: Nasional, Regional, Kampus">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Visi & Misi</label>
+                <textarea id="newOrgVision" rows="5" required placeholder="Tuliskan visi dan misi organisasi..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Deskripsi Singkat</label>
+                <textarea id="newOrgDesc" rows="3" required placeholder="Jelaskan apa itu organisasi Anda..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Kriteria Keanggotaan</label>
+                <textarea id="newOrgRequirement" rows="3" placeholder="Apa syarat untuk menjadi anggota?"></textarea>
+            </div>
+
+            <div class="grid-2-col">
+                <div class="form-group">
+                    <label>Alamat Kantor</label>
+                    <input type="text" id="newOrgAddress" placeholder="Lokasi sekretariat">
+                </div>
+                <div class="form-group">
+                    <label>Tautan Eksternal (Website/Sosmed)</label>
+                    <input type="url" id="newOrgLink" placeholder="https://...">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-success">Daftarkan & Jadi Pimpinan</button>
+                <button type="button" onclick="loadOrgListPage(null, GLOBAL_USER)" class="btn-secondary">Batal</button>
+            </div>
+        </form>
+    `;
+
+    document.getElementById('fullOrgCreateForm').addEventListener('submit', handleFullOrgCreation);
+}
+
+// Handler submit untuk pendaftaran mandiri (Form Lengkap)
+function handleFullOrgCreation(event) {
+    event.preventDefault();
+    const creatorId = localStorage.getItem("CURRENT_USER_ID");
+
+    const data = {
+        name: document.getElementById('newOrgName').value,
+        period: document.getElementById('newOrgPeriod').value,
+        establishedDate: document.getElementById('newOrgDate').value,
+        field: document.getElementById('newOrgField').value,
+        scope: document.getElementById('newOrgScope').value,
+        visionMission: document.getElementById('newOrgVision').value,
+        description: document.getElementById('newOrgDesc').value,
+        membershipRequirement: document.getElementById('newOrgRequirement').value,
+        address: document.getElementById('newOrgAddress').value,
+        externalLink: document.getElementById('newOrgLink').value,
+        status: "ACTIVE"
+    };
+
+    fetch(`/api/organizations?creatorId=${creatorId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+        .then(async res => {
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.message || "Gagal mendaftarkan organisasi.");
+            return result;
+        })
+        .then(() => {
+            showToast("Pendaftaran Berhasil! Anda sekarang adalah Pimpinan.", "success");
+            setTimeout(() => window.location.reload(), 1500);
+        })
+        .catch(err => showToast(err.message, "error"));
+}
+
+function handleSelfOrgCreation(event) {
+    event.preventDefault();
+    const creatorId = localStorage.getItem("CURRENT_USER_ID");
+    const data = {
+        name: document.getElementById('newOrgName').value,
+        period: document.getElementById('newOrgPeriod').value,
+        description: document.getElementById('newOrgDesc').value,
+        status: "ACTIVE"
+    };
+
+    fetch(`/api/organizations?creatorId=${creatorId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+        .then(res => res.json())
+        .then(() => {
+            showToast("Organisasi berhasil dibuat! Anda sekarang Pimpinan.", "success");
+            location.reload(); // Reload untuk mengaktifkan dashboard pimpinan
+        })
+        .catch(err => showToast("Gagal mendaftar: " + err.message, "error"));
 }
 
 function handleOrgListSortAndSearch(newKeyword, newSortBy, newSortDirection) {
@@ -1780,6 +2151,7 @@ function loadOrganizationProfile(orgId, event) {
                         <h4>🎯 Visi & Misi</h4>
                         <p>${org.visionMission || 'Belum diatur.'}</p>
                         <p>📅 <b>Berdiri Sejak:</b> ${formattedDate}</p>
+                        <p>⏳ <b>Periode Kepengurusan:</b> ${org.period || '-'}</p>
                         <p>📂 <b>Bidang:</b> ${org.field || '-'}</p>
                         <p>🌎 <b>Lingkup:</b> ${org.scope || '-'}</p>
                     </div>
@@ -2206,6 +2578,15 @@ function loadNotificationPage() {
                     // Klik notif langsung ke halaman Kelola Anggota
                     clickAction = `onclick="navigateTo('kelola', () => loadPimpinanDashboard(GLOBAL_USER))"`;
                     borderStyle = 'border-left: 4px solid #e53e3e; cursor: pointer;'; // Merah untuk resign
+                }   
+                else if (n.message.startsWith("NEW_ORG_REQUEST:")) {
+                    const orgId = n.message.split(":")[1];
+                    displayMessage = `<b>Pendaftaran Baru:</b> ${n.message.split(":")[2]}`;
+                    clickAction = `onclick="loadOrganizationProfile(${orgId}, event)"`;
+                } else if (n.message.startsWith("HANDOVER_INFO:")) {
+                    const orgId = n.message.split(":")[1];
+                    displayMessage = `<b>Pergantian Pimpinan:</b> Organisasi ID ${orgId}`;
+                    clickAction = `onclick="loadOrganizationProfile(${orgId}, event)"`;
                 }
 
                 return `
@@ -2256,7 +2637,7 @@ function loadProkerPage(event) {
     const container = document.getElementById('main-content-area');
     const orgId = GLOBAL_USER.organization ? GLOBAL_USER.organization.id : null;
 
-    if (!orgId) {
+    if (!orgId && GLOBAL_USER.role !== 'ADMIN') {
         container.innerHTML = "<h3>Anda belum terdaftar di organisasi.</h3>";
         return;
     }
@@ -2631,6 +3012,7 @@ function loadResignRequests(orgId) {
 function processResign(targetUserId, action) {
     const approverId = GLOBAL_USER.id;
     const actionText = action === 'APPROVE' ? "MENYETUJUI" : "MENOLAK";
+    const isMe = targetUserId == GLOBAL_USER.id;
 
     customConfirm(`Apakah Anda yakin ingin ${actionText} pengunduran diri ini?`, () => {
         // Kita gunakan method PUT ke endpoint yang akan kita buat di UserController
@@ -2639,11 +3021,26 @@ function processResign(targetUserId, action) {
         })
             .then(async res => {
                 if (res.ok) {
-                    showToast(`Permintaan berhasil di-${action === 'APPROVE' ? 'setujui' : 'tolak'}`, "success");
-                    loadPimpinanDashboard(GLOBAL_USER); // Refresh data
+                    showToast("Pengunduran diri berhasil diproses.", "success");
+
+                    if (isMe && action === 'APPROVE') {
+                        localStorage.removeItem("CURRENT_ORG_ID");
+                        GLOBAL_USER.organization = null;
+                        GLOBAL_USER.role = 'USER';
+                        GLOBAL_USER.memberStatus = 'NON_MEMBER';
+                        localStorage.setItem("CURRENT_USER_STATUS", "NON_MEMBER");
+
+                        showToast("Status Anda diperbarui. Memuat ulang sistem...", "info");
+                        setTimeout(() => {
+                            // Opsi 1: Reload halaman total untuk reset sidebar & state
+                            window.location.href = "/struktura";
+                        }, 1500);
+                    } else {
+                        loadPimpinanDashboard(GLOBAL_USER);
+                    }
                 } else {
                     const errorText = await res.text();
-                    showToast("Gagal memproses: " + errorText, "error");
+                    showToast("Gagal: " + errorText, "error");
                 }
             })
             .catch(err => console.error("Error process resign:", err));
@@ -2709,6 +3106,19 @@ function submitResignation() {
         .catch(err => showToast(err.message, "error"));
 }
 
+function confirmHandover(targetId, targetName) {
+    customConfirm(`⚠️ PERINGATAN: Anda akan menyerahkan jabatan Pimpinan kepada ${targetName}. Anda akan turun jabatan menjadi Anggota Biasa dan kehilangan akses Kelola. Lanjutkan?`, () => {
+        const pimpinanId = GLOBAL_USER.id;
+        fetch(`/api/users/${pimpinanId}/handover/${targetId}`, { method: 'PUT' })
+            .then(res => {
+                if (res.ok) {
+                    showToast("Serah terima jabatan berhasil! Mengalihkan ke dashboard anggota...", "success");
+                    setTimeout(() => location.reload(), 2000); // Reload untuk update role UI
+                }
+            });
+    });
+}
+
 function extractBidangFromPosition(position) {
     if (!position || position === "Anggota") return "Umum";
     const p = position.toLowerCase();
@@ -2741,7 +3151,9 @@ window.onpopstate = function (event) {
     const section = (event.state && event.state.section) ? event.state.section : 'dashboard';
 
     // Aksi berdasarkan riwayat
-    if (section === 'kelola-org') loadEditOrganizationPage();
+    if (section === 'create-org') loadCreateOrganizationPage();
+    else if (section === 'kelola-org') loadEditOrganizationPage();
+    else if (section === 'handover') loadHandoverPage();
     else if (section === 'orgList') loadOrgListPage(null, GLOBAL_USER);
     else if (section === 'notifications') loadNotificationPage();
     else if (section === 'proker') loadProkerPage(null);

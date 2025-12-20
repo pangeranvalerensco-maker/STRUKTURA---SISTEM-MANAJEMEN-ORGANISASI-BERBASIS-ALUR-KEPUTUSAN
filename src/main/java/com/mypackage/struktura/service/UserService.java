@@ -27,7 +27,8 @@ public interface UserService {
 
     User assignPimpinan(Long adminId, Long targetUserId, Long organizationId);
 
-    Page<User> searchAndSortActiveMembers(Long organizationId, String keyword, int page, int size, String sortBy, String sortDirection);
+    Page<User> searchAndSortActiveMembers(Long organizationId, String keyword, int page, int size, String sortBy,
+            String sortDirection);
 
     User updateUser(Long id, User userDetails);
 
@@ -44,4 +45,8 @@ public interface UserService {
     User processResignation(Long pimpinanId, Long targetUserId, String action);
 
     void deleteUser(Long userId);
+
+    User handoverLeadership(Long currentPimpinanId, Long targetMemberId);
+
+    User changePassword(Long userId, String oldPassword, String newPassword);
 }

@@ -3,6 +3,9 @@ package com.mypackage.struktura.controller;
 import com.mypackage.struktura.model.entity.ProgramKerja;
 import com.mypackage.struktura.model.entity.ProkerStatus;
 import com.mypackage.struktura.service.ProgramKerjaService;
+
+import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +23,7 @@ public class ProgramKerjaController {
             @PathVariable Long orgId,
             @RequestParam Long creatorId,
             @RequestParam Long picId,
-            @RequestBody ProgramKerja proker) {
+            @Valid @RequestBody ProgramKerja proker) {
         try {
             ProgramKerja result = prokerService.createProker(creatorId, orgId, picId, proker);
             return ResponseEntity.ok(result);
