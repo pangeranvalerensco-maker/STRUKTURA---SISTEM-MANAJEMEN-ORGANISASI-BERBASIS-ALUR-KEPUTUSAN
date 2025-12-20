@@ -93,9 +93,9 @@ Halo! Saya **Pangeran Valerensco Rivaldi Hutabarat**, pengembang dibalik aplikas
 ### 🌐 Media Sosial & Kontak
 Mari terhubung dan berdiskusi lebih lanjut mengenai teknologi atau kolaborasi proyek:
 
-- **Instagram**: [@pangeranvalerensco](https://instagram.com/pangeranvalerensco)
-- **Facebook**: [Pangeran Valerensco](https://facebook.com/pangeranvalerensco)
-- **YouTube**: [Pangeran Valerensco](https://youtube.com/@pangeranvalerensco)
+- **Instagram**: [@pangeranvalerensco](https://www.instagram.com/varelrivaldi_hutabarat/)
+- **Facebook**: [Pangeran Valerensco](https://www.facebook.com/varel.rival.9)
+- **YouTube**: [Pangeran Valerensco](https://www.youtube.com/@pangeranvalerensco9928)
 - **Email**: [pangeranvalerensco@gmail.com](mailto:pangeranvalerensco@gmail.com)
 - **WhatsApp**: [+62 821-8129-6229](https://wa.me/6282181296229)
 
