@@ -1,25 +1,36 @@
-// File: auth-init.js (FINAL & FIXED)
-
+// --- 1. SESSION GUARD (Wajib Paling Atas) ---
 const currentUserId = localStorage.getItem("CURRENT_USER_ID");
 const isLoggedIn = currentUserId !== null;
+const currentPath = window.location.pathname;
 
-// Logika 1: Menentukan tujuan link Logo/Struktura
+// Daftar halaman yang boleh diakses tanpa login
+const publicPages = ['/login', '/register', '/'];
+const isPublicPage = publicPages.includes(currentPath);
+
+// Proteksi Akses Ilegal
+if (isLoggedIn && isPublicPage) {
+    // Jika sudah login tapi coba buka Login/Home, tendang ke Dashboard
+    window.location.replace("/struktura");
+} else if (!isLoggedIn && currentPath.includes('/struktura')) {
+    // Jika belum login tapi coba buka Dashboard, paksa Login
+    window.location.replace("/login");
+}
+
+// --- 2. HEADER & UI LOGIC ---
+
 function updateLogoLink() {
     const logoLink = document.getElementById('main-logo-link');
     if (logoLink) {
-        logoLink.href = isLoggedIn ? "/dashboard" : "/";
+        logoLink.href = isLoggedIn ? "/struktura" : "/";
     }
 }
 
-// Logika 2: Merender area Login/Logout (Memperbaiki link header yang mati)
 function renderHeaderAuth() {
     const authArea = document.getElementById('auth-area');
     if (!authArea) return;
 
     if (isLoggedIn) {
         const userName = localStorage.getItem("CURRENT_USER_NAME") || "Akun Saya";
-
-        // 🛑 PERUBAHAN KRITIS: Mengganti tombol Logout kaku dengan Dropdown
         authArea.innerHTML = `
             <div class="user-dropdown">
                 <button class="dropdown-toggle" onclick="toggleDropdown(event)">
@@ -32,7 +43,6 @@ function renderHeaderAuth() {
             </div>
         `;
     } else {
-        // 🛑 Link Login/Daftar di sini sudah pasti bekerja
         authArea.innerHTML = `
             <a href="/login">Login</a>
             <a href="/register" class="auth-register">Daftar</a>
@@ -40,58 +50,90 @@ function renderHeaderAuth() {
     }
 }
 
-// 🛑 Fungsi baru untuk Dropdown (Tambahkan di auth-init.js)
 function toggleDropdown(event) {
     event.stopPropagation();
-    document.getElementById("userMenuDropdown").classList.toggle("show");
+    const dropdown = document.getElementById("userMenuDropdown");
+    if (dropdown) dropdown.classList.toggle("show");
 }
 
-// 🛑 Fungsi untuk menangani klik Profil (Tambahkan di auth-init.js)
 function handleProfileClick(event) {
     event.preventDefault();
-    // Panggil fungsi loadProfilePage dari dashboard.js
     if (typeof loadProfilePage === 'function') {
         loadProfilePage(event);
     } else {
-        // Fallback
-        window.location.href = "/dashboard"; 
+        window.location.href = "/struktura#profile"; 
     }
-    // Tutup dropdown setelah klik
-    document.getElementById("userMenuDropdown").classList.remove("show");
+    const dropdown = document.getElementById("userMenuDropdown");
+    if (dropdown) dropdown.classList.remove("show");
 }
 
-// Tambahkan event listener untuk menutup dropdown saat klik di luar
-window.onclick = function(event) {
+// Tutup dropdown saat klik di luar
+window.addEventListener('click', (event) => {
     if (!event.target.matches('.dropdown-toggle')) {
-        var dropdowns = document.getElementsByClassName("dropdown-menu");
-        for (let i = 0; i < dropdowns.length; i++) {
-            var openDropdown = dropdowns[i];
-            if (openDropdown.classList.contains('show')) {
-                openDropdown.classList.remove('show');
-            }
+        const dropdowns = document.getElementsByClassName("dropdown-menu");
+        for (let d of dropdowns) {
+            if (d.classList.contains('show')) d.classList.remove('show');
         }
     }
-}
+});
 
-// Logika 3: Redirect hanya jika mencoba mengakses DASHBOARD tanpa login
-function checkDashboardAccess() {
-    const currentPath = window.location.pathname;
-    if (currentPath.includes('/dashboard') && !isLoggedIn) {
-        window.location.href = "/login";
+// --- 3. UTILITIES (Toast, Confirm, Logout) ---
+
+function showToast(message, type = 'success', duration = 3000) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
     }
+
+    const toastElement = document.createElement('div');
+    toastElement.className = `toast toast-${type}`;
+    toastElement.textContent = message;
+
+    container.appendChild(toastElement);
+    setTimeout(() => toastElement.classList.add('show'), 10);
+    setTimeout(() => {
+        toastElement.classList.remove('show');
+        setTimeout(() => toastElement.remove(), 500);
+    }, duration);
 }
 
-// Fungsi universal untuk logout (dengan konfirmasi)
+function customConfirm(message, onConfirm) {
+    const modalHtml = `
+        <div id="customConfirmOverlay" class="confirm-overlay">
+            <div class="confirm-box">
+                <h4>Konfirmasi</h4>
+                <p>${message}</p>
+                <div class="confirm-buttons">
+                    <button id="btnConfirmYes" class="btn-primary">Ya, Lanjutkan</button>
+                    <button id="btnConfirmNo" class="btn-secondary">Batal</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    document.getElementById('btnConfirmNo').onclick = () => document.getElementById('customConfirmOverlay').remove();
+    document.getElementById('btnConfirmYes').onclick = () => {
+        document.getElementById('customConfirmOverlay').remove();
+        if (onConfirm) onConfirm();
+    };
+}
+
 function logout() {
-    if (confirm("Apakah Anda yakin ingin logout?")) {
+    customConfirm("Apakah Anda yakin ingin keluar?", () => {
+        showToast("Logout berhasil...", "default");
         localStorage.clear();
-        window.location.href = "/"; // Redirect ke home page
-    }
+        setTimeout(() => {
+            window.location.replace("/login");
+        }, 500);
+    });
 }
 
-// Inisialisasi pada pemuatan DOM
+// Inisialisasi DOM
 document.addEventListener('DOMContentLoaded', () => {
     updateLogoLink();
     renderHeaderAuth();
-    checkDashboardAccess();
 });

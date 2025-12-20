@@ -31,8 +31,23 @@ public class Organization {
     @JsonIgnore
     private List<User> members;
 
+    // Tambahkan field baru
+    private LocalDate establishedDate;
+    @Column(length = 2000)
+    private String visionMission; // Tujuan
+    private String scope; // Ruang Lingkup
+    private String field; // Bidang
+
+    @Column(length = 500)
+    private String address; // Alamat Kantor
+
+    private String externalLink; // Link Website/Sosmed
+
+    private String membershipRequirement; // Tambahkan field ini
+
     // === CONSTRUCTOR ===
-    public Organization() {}
+    public Organization() {
+    }
 
     // === GETTER & SETTER ===
     public Long getId() {
@@ -81,5 +96,61 @@ public class Organization {
 
     public void setMembers(List<User> members) {
         this.members = members;
+    }
+
+    public LocalDate getEstablishedDate() {
+        return establishedDate;
+    }
+
+    public void setEstablishedDate(LocalDate establishedDate) {
+        this.establishedDate = establishedDate;
+    }
+
+    public String getVisionMission() {
+        return visionMission;
+    }
+
+    public void setVisionMission(String visionMission) {
+        this.visionMission = visionMission;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
+    }
+
+    public String getField() {
+        return field;
+    }
+
+    public void setField(String field) {
+        this.field = field;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getExternalLink() {
+        return externalLink;
+    }
+
+    public void setExternalLink(String externalLink) {
+        this.externalLink = externalLink;
+    }
+
+    public String getMembershipRequirement() {
+        return membershipRequirement;
+    }
+
+    public void setMembershipRequirement(String membershipRequirement) {
+        this.membershipRequirement = membershipRequirement;
     }
 }

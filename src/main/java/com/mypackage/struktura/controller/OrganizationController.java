@@ -8,7 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/organizations")
@@ -117,4 +119,37 @@ public class OrganizationController {
         }
     }
 
+    @GetMapping("/{id}/details")
+    public ResponseEntity<?> getOrgDetails(@PathVariable Long id) {
+        try {
+            Organization org = organizationService.getOrganizationById(id);
+            // Mengambil daftar anggota aktif untuk ditampilkan di profil organisasi
+            List<User> members = userService.getActiveMembers(id);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("organization", org);
+            response.put("members", members);
+            response.put("memberCount", members.size());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Gagal mengambil detail organisasi: " + e.getMessage());
+        }
+    }
+
+    // Tambahkan di dalam OrganizationController.java
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateOrganization(
+            @PathVariable Long id,
+            @RequestParam Long pimpinanId,
+            @RequestBody Organization updatedData) {
+        try {
+            // Memanggil method update yang sudah ada di service Anda
+            Organization org = organizationService.updateOrganization(id, updatedData, pimpinanId);
+            return new ResponseEntity<>(org, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
 }

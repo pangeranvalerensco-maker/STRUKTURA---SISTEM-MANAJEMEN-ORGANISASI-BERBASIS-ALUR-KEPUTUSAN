@@ -22,6 +22,7 @@ document.getElementById('registerForm').addEventListener('submit', function(even
             // Pendaftaran sukses, redirect ke login
             message.style.color = "green";
             message.innerText = "Pendaftaran berhasil! Silakan login.";
+            showToast("Pendaftaran berhasil! Silakan login.", "success"); // Tambahkan ini
             setTimeout(() => {
                 window.location.href = "/login";
             }, 1500);

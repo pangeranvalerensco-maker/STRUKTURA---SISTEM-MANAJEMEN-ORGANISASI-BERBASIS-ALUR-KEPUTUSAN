@@ -21,7 +21,7 @@ public class PageController {
         return "register";
     }
 
-    @GetMapping("/dashboard")
+    @GetMapping("/struktura")
     public String dashboardPage() {
         return "dashboard"; // dashboard.html
     }

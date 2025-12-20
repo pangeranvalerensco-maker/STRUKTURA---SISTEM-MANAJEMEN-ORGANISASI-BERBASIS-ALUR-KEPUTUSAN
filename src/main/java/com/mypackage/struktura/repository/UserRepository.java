@@ -2,6 +2,7 @@ package com.mypackage.struktura.repository;
 
 import com.mypackage.struktura.model.entity.MemberStatus;
 import com.mypackage.struktura.model.entity.User;
+import com.mypackage.struktura.model.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -12,7 +13,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     Optional<User> findByEmail(String email);
 
-    List<User> findByRole(String role);
+    List<User> findByRole(Role role);
 
     List<User> findByMemberStatus(String memberStatus);
 
@@ -21,5 +22,12 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     List<User> findByOrganizationIdAndMemberStatus(
             Long organizationId,
             MemberStatus memberStatus);
+
+    Optional<User> findById(Long id);
+
+    User getUserById(Long id);
+
+    // Tambahkan di UserRepository.java
+    List<User> findByOrganizationIdAndRole(Long organizationId, Role role);
 
 }

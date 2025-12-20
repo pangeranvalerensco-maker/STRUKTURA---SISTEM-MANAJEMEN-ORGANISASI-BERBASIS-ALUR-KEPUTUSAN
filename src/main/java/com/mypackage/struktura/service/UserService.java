@@ -34,4 +34,14 @@ public interface UserService {
     User updateMemberPosition(Long pimpinanId, Long targetUserId, String newPosition); // 🛑 METHOD BARU
 
     User updateMemberNumber(Long pimpinanId, Long targetUserId, String memberNumber); // 🛑 METHOD BARU
+
+    void revokeMembership(Long userId, String Reason); // 🛑 METHOD BARU
+
+    User resetUserStatus(Long userId);
+
+    void requestResignation(Long userId, String reason);
+
+    User processResignation(Long pimpinanId, Long targetUserId, String action);
+
+    void deleteUser(Long userId);
 }

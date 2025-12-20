@@ -1,24 +1,29 @@
 package com.mypackage.struktura.service.impl;
 
 import com.mypackage.struktura.model.entity.Organization;
+import com.mypackage.struktura.model.entity.Role;
+import com.mypackage.struktura.model.entity.User;
 import com.mypackage.struktura.repository.OrganizationRepository;
+import com.mypackage.struktura.repository.UserRepository;
 import com.mypackage.struktura.service.OrganizationService;
 import org.springframework.stereotype.Service;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
 
     private final OrganizationRepository organizationRepository;
+    private final UserRepository userRepository;
 
-    public OrganizationServiceImpl(OrganizationRepository organizationRepository) {
+    public OrganizationServiceImpl(OrganizationRepository organizationRepository, UserRepository userRepository) {
         this.organizationRepository = organizationRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -45,21 +50,42 @@ public class OrganizationServiceImpl implements OrganizationService {
         Sort.Direction direction = sortDirection.equalsIgnoreCase("DESC") ? Sort.Direction.DESC : Sort.Direction.ASC;
         Sort sort = Sort.by(direction, sortBy);
 
-        // Status wajib aktif
         String activeStatus = "ACTIVE";
 
         if (keyword == null || keyword.isEmpty()) {
-            // Case 1: Keyword KOSONG
             return organizationRepository.findByStatusIgnoreCase(activeStatus, sort);
         }
 
-        // Case 2: Keyword ADA (Gunakan @Query yang baru)
         String searchPattern = "%" + keyword.toLowerCase() + "%";
-
-        // Panggil method @Query yang mencari Name/Desc DAN Status "ACTIVE"
-        return organizationRepository.searchActiveByNameOrDescription(
-                searchPattern, // Keyword (Mencari di Name/Desc)
-                activeStatus, // Status wajib "ACTIVE"
-                sort);
+        return organizationRepository.searchActiveByNameOrDescription(searchPattern, activeStatus, sort);
     }
+
+    @Override
+    public Organization updateOrganization(Long orgId, Organization updatedData, Long pimpinanId) {
+        // 1. Validasi Pimpinan
+        User pimpinan = userRepository.findById(pimpinanId)
+                .orElseThrow(() -> new RuntimeException("Pimpinan tidak ditemukan"));
+
+        // Cek apakah user adalah Pimpinan dan milik organisasi tersebut
+        if (pimpinan.getRole() != Role.PIMPINAN || !pimpinan.getOrganization().getId().equals(orgId)) {
+            throw new RuntimeException("Hanya Pimpinan organisasi ini yang boleh mengedit profil.");
+        }
+
+        // 2. Ambil data lama
+        Organization org = organizationRepository.findById(orgId)
+                .orElseThrow(() -> new RuntimeException("Organisasi tidak ditemukan"));
+
+        // 3. Update field
+        org.setDescription(updatedData.getDescription());
+        org.setEstablishedDate(updatedData.getEstablishedDate());
+        org.setVisionMission(updatedData.getVisionMission());
+        org.setScope(updatedData.getScope());
+        org.setField(updatedData.getField());
+        org.setAddress(updatedData.getAddress()); // Field baru
+        org.setExternalLink(updatedData.getExternalLink()); // Field baru
+        org.setMembershipRequirement(updatedData.getMembershipRequirement());
+
+        return organizationRepository.save(org);
+    }
+
 }

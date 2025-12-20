@@ -3,8 +3,6 @@ package com.mypackage.struktura.model.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 @Entity
 @Table(name = "users")
 public class User {
@@ -53,6 +51,8 @@ public class User {
     private String applicationReason;
 
     private String position;
+    
+    private String revokeReason; // Alasan pencabutan keanggotaan
 
     // constructor, getters, setters lainnya
 
@@ -171,5 +171,13 @@ public class User {
 
     public void setPosition(String position) {
         this.position = position;
+    }
+
+    public String getRevokeReason() {
+        return revokeReason;
+    }
+
+    public void setRevokeReason(String revokeReason) {
+        this.revokeReason = revokeReason;
     }
 }

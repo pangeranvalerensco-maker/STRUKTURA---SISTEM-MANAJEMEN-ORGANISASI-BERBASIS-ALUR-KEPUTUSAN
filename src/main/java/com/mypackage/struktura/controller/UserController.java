@@ -195,4 +195,57 @@ public class UserController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
+
+    @PostMapping("/{userId}/revoke")
+    public ResponseEntity<?> revokeMembership(
+            @PathVariable Long userId,
+            @RequestParam String reason) {
+        try {
+            userService.revokeMembership(userId, reason);
+            return ResponseEntity.ok("Keanggotaan berhasil dicabut");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{userId}/reset-status")
+    public ResponseEntity<?> resetStatus(@PathVariable Long userId) {
+        try {
+            // Panggil service, jangan panggil repository langsung di controller
+            User user = userService.resetUserStatus(userId);
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{userId}/request-resign")
+    public ResponseEntity<?> requestResignation(@PathVariable Long userId, @RequestParam String reason) {
+        userService.requestResignation(userId, reason);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{pimpinanId}/process-resign/{targetUserId}")
+    public ResponseEntity<?> processResign(
+            @PathVariable Long pimpinanId,
+            @PathVariable Long targetUserId,
+            @RequestParam String action) {
+        try {
+            User updatedUser = userService.processResignation(pimpinanId, targetUserId, action);
+            return ResponseEntity.ok(updatedUser);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // Tambahkan di dalam UserController.java
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<?> deleteAccount(@PathVariable Long userId) {
+        try {
+            userService.deleteUser(userId);
+            return ResponseEntity.ok("Akun berhasil dihapus.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
 }

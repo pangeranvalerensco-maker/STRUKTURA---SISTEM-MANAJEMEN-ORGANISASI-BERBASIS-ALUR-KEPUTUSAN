@@ -12,6 +12,26 @@ let orgCurrentSortDirection = 'ASC';
 
 const userId = localStorage.getItem("CURRENT_USER_ID");
 let GLOBAL_USER = {}; // 🛑 VARIABEL GLOBAL USER LENGKAP
+let CURRENT_ORG_MEMBERS = [];
+let CURRENT_ACTIVE_MEMBERS = []; // Variabel global baru untuk menampung data anggota
+let SEARCH_RESULT_CACHE = []; // Variabel baru
+
+// Tambahkan variabel global di bagian atas dashboard.js
+let LAST_PAGE_BEFORE_PROFILE = 'dashboard';
+
+
+// Fungsi pembantu untuk membuka profil dengan mencatat asal halaman
+function viewMemberProfile(userId, fromPage) {
+    // 1. Cek dan tutup modal detail proker jika sedang terbuka
+    const modalProker = document.getElementById('prokerDetailModal');
+    if (modalProker) {
+        modalProker.remove();
+    }
+
+    // 2. Simpan asal halaman dan muat profil
+    LAST_PAGE_BEFORE_PROFILE = fromPage;
+    loadUserProfile(userId);
+}
 
 // =========================================================================
 // === INIT & CORE ROUTING =================================================
@@ -34,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(user => {
             GLOBAL_USER = user; // 🛑 SIMPAN DATA LENGKAP DI GLOBAL
+            renderSidebar(user);
 
             // Simpan status dan email yang benar ke localStorage
             localStorage.setItem("CURRENT_USER_STATUS", user.memberStatus);
@@ -41,7 +62,34 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem("CURRENT_USER_EMAIL", user.email); // 🛑 FIX: Email tersimpan!
 
             renderSidebar(user); // Render sidebar dengan data user
-            loadDefaultLanding(null, user); // Muat konten default
+            // LOGIKA REFRESH: Cek hash di URL
+            const currentHash = window.location.hash;
+
+            if (currentHash === '#profile') {
+                loadProfilePage(null);
+            } else if (currentHash === '#proker' && user.memberStatus === 'ACTIVE') {
+                loadProkerPage(null);
+            } else if (currentHash === '#notifications') { // 🛑 TAMBAHKAN INI
+                loadNotificationPage();
+            } else if (currentHash === '#orgList' || currentHash === '#org-list') {
+                loadOrgListPage(null, user);
+            } else if (currentHash === '#kelola-org' && user.role === 'PIMPINAN') {
+                // 🛑 Tambahkan ini agar refresh di halaman Kelola Org berhasil
+                loadEditOrganizationPage();
+            } else if (currentHash === '#kelola' && user.role === 'PIMPINAN') {
+                loadPimpinanDashboard(user);
+            } else if (currentHash.startsWith('#organization-')) {
+                // 🛑 FIX: Tambahkan penanganan untuk Profil Organisasi saat refresh
+                const orgId = currentHash.split('-')[1];
+                loadOrganizationProfile(orgId);
+            } else if (currentHash.startsWith('#user-')) {
+                // 🛑 SOLUSI: Tambahkan ini agar saat refresh profil anggota tetap di tempat
+                const targetUserId = currentHash.split('-')[1];
+                loadUserProfile(targetUserId, null);
+            } else {
+                updatePageTitle("Dashboard Utama");
+                loadDefaultLanding(null, user);
+            }
         })
         .catch(err => {
             document.getElementById("main-content-area").innerHTML =
@@ -52,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderSidebar(user) {
     const sideInfoArea = document.getElementById("side-info-area");
     const orgName = user.organization ? user.organization.name : 'Belum Ada';
+    const hasOrg = user.organization !== null; //
 
     sideInfoArea.innerHTML = `
         <div class="card-section">
@@ -63,20 +112,37 @@ function renderSidebar(user) {
         </div>
         
         <div class="card-section" style="margin-top: 20px;">
-            <h4>Menu Utama</h4>
-            <ul id="main-menu" class="side-menu-list">
-                <li><a href="#" onclick="loadDefaultLanding(event, GLOBAL_USER)">Dashboard Utama</a></li>
-                <li><a href="#" onclick="loadOrgListPage(event, GLOBAL_USER)">Daftar Organisasi</a></li> 
-            </ul>
-        </div>
+        <h4>Menu Utama</h4>
+        <ul id="main-menu" class="side-menu-list">
+            <li><a href="#" onclick="navigateTo('dashboard', () => loadDefaultLanding(null, GLOBAL_USER), event)">Dashboard Utama</a></li>
+            <li><a href="#" onclick="navigateTo('orgList', () => loadOrgListPage(null, GLOBAL_USER), event)">Daftar Organisasi</a></li> 
+            ${hasOrg ? `<li><a href="#" onclick="LAST_PAGE_BEFORE_PROFILE = 'dashboard'; loadOrganizationProfile(${user.organization.id}, event)">Organisasi Saya</a></li>` : ''}
+            <li>
+                <a href="#" onclick="navigateTo('notifications', () => loadNotificationPage(), event)">
+                    Pemberitahuan <span id="notifBadge" class="badge-notif" style="display:none;">0</span>
+                </a>
+            </li>
+            ${user.memberStatus === "ACTIVE" ?
+            `<li><a href="#" onclick="navigateTo('proker', () => loadProkerPage(null), event)">Program Kerja</a></li>` : ''
+        }
+        </ul>
+    </div>
     `;
 
     const mainMenu = document.getElementById("main-menu");
-    if (user.role === "ADMIN") {
-        mainMenu.innerHTML += `<li><a href="#" onclick="loadAdminDashboard(GLOBAL_USER, event)">Kelola Admin</a></li>`;
-    } else if (user.role === "PIMPINAN") {
-        mainMenu.innerHTML += `<li><a href="#" onclick="loadPimpinanDashboard(GLOBAL_USER, event)">Kelola Anggota</a></li>`;
+
+    if (user.role === "PIMPINAN") {
+        mainMenu.innerHTML += `
+    <li>
+        <a href="#" onclick="LAST_PAGE_BEFORE_PROFILE = window.location.hash.replace('#',''); navigateTo('kelola-org', () => loadEditOrganizationPage(), event)">
+            Kelola Organisasi
+        </a>
+    </li>
+    <li><a href="#" onclick="navigateTo('kelola', () => loadPimpinanDashboard(GLOBAL_USER), event)">Kelola Anggota</a></li>
+`;
     }
+
+    fetchUnreadNotifCount();
 }
 
 // -------------------------------------------------------------------------
@@ -94,35 +160,46 @@ function preventDefault(event) {
 }
 
 function loadProfilePage(event) {
-    preventDefault(event); // Mencegah reload halaman
-    const user = GLOBAL_USER; // Ambil data user lengkap (Wajib dari GLOBAL_USER)
-    const container = document.getElementById('main-content-area');
+    if (event) event.preventDefault();
+    updatePageTitle("Profil Saya");
+    const user = GLOBAL_USER;
 
-    // Format data untuk tampilan
-    const formattedBirthDate = user.birthDate ? new Date(user.birthDate).toLocaleDateString('id-ID') : 'N/A';
-    const genderDisplay = user.gender ? (user.gender === 'MALE' ? 'Laki-laki' : 'Perempuan') : 'N/A';
+    history.pushState({ section: 'profile' }, "Profil Saya", "#profile");
+    const container = document.getElementById('main-content-area');
+    const birthDateFormatted = formatIndoDate(user.birthDate);
+
+    const hasOrg = user.organization !== null;
+    let dangerZoneAction = '';
+
+    // 🛑 LOGIKA TOMBOL DINAMIS
+    let deleteBtnAttr = hasOrg ? 'disabled title="Keluar organisasi dahulu sebelum hapus akun" style="opacity:0.5; cursor:not-allowed;"' : 'onclick="confirmDeleteAccount()"';
+    let resignBtn = hasOrg ? `<button onclick="openResignModal()" class="btn-danger-outline">Mengundurkan Diri</button>` : '';
 
     container.innerHTML = `
         <h3>Profil Saya</h3>
         <p>Lihat dan kelola informasi akun Anda di sini.</p>
         <hr>
-
         <div class="card-section profile-details">
             <table class="data-table">
-                <tr><th>Nama</th><td>${user.name || 'N/A'}</td></tr>
-                <tr><th>Email</th><td>${user.email || 'N/A'}</td></tr>
-                <tr><th>Role</th><td>${user.role || 'N/A'}</td></tr>
-                
-                <tr><th>Status Keanggotaan</th><td>${user.memberStatus || 'N/A'}</td></tr>
-                ${user.organization ? `<tr><th>Organisasi</th><td>${user.organization.name}</td></tr>` : ''}
-                
-                <tr style="border-top: 1px solid #ccc;"><th>Jenis Kelamin</th><td>${genderDisplay}</td></tr>
-                <tr><th>Tanggal Lahir</th><td>${formattedBirthDate}</td></tr>
-                
-                ${user.position ? `<tr><th>Jabatan</th><td>${user.position}</td></tr>` : ''}
-                ${user.memberNumber ? `<tr><th>No. Anggota</th><td>${user.memberNumber}</td></tr>` : ''}
+                <tr><th>Nama</th><td>${user.name || '-'}</td></tr>
+                <tr><th>Tanggal Lahir</th><td>${birthDateFormatted || '-'}</td></tr>
+                <tr><th>Email</th><td>${user.email || '-'}</td></tr>
+                <tr><th>Role</th><td><b>${user.role}</b></td></tr>
+                <tr><th>Status</th><td>${user.memberStatus}</td></tr>
+                <tr><th>Jabatan</th><td>${user.position || '-'}</td></tr>
+                <tr><th>No. Anggota</th><td>${user.memberNumber || '-'}</td></tr>
+                <tr><th>Organisasi</th><td>${user.organization ? user.organization.name : '-'}</td></tr>
+                <tr><th>Jenis Kelamin</th><td>${user.gender === 'MALE' ? 'Laki-laki' : user.gender === 'FEMALE' ? 'Perempuan' : '-'}</td></tr>
+                <tr><th>Pengalaman</th><td>${user.experienceSummary || '-'}</td></tr>
             </table>
-            <button onclick="loadEditProfileForm(GLOBAL_USER)" class="btn-primary">Edit Profil</button>
+            <div class="danger-zone" style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">
+                <h4 style="color:red;">Manajemen Akun</h4>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button onclick="loadEditProfileForm(GLOBAL_USER)" class="btn-primary">Edit Profil</button>
+                    ${resignBtn}
+                    <button ${deleteBtnAttr} class="btn-danger-outline">Hapus Akun</button>
+                </div>
+            </div>
         </div>
     `;
 }
@@ -160,10 +237,17 @@ function loadEditProfileForm(user) {
 
             <div>
                 <label for="editBirthDate">Tanggal Lahir</label>
-                <input type="date" id="editBirthDate" value="${birthDateValue}">
+                <input type="date" id="editBirthDate" max="9999-12-31" value="${birthDateValue}">
             </div>
             
-            <p id="editMessage"></p> <div>
+            <div style="grid-column: span 2;">
+                <label for="editExperienceSummary">Ringkasan Pengalaman Organisasi</label>
+                <textarea id="editExperienceSummary" rows="4" placeholder="Contoh: Ketua Himpunan Mahasiswa Teknik (2020-2021); Anggota Divisi Humas (2018-2019).">${user.experienceSummary || ''}</textarea>
+            </div>
+
+            <p id="editMessage"></p> 
+
+            <div style="grid-column: span 2;">
                 <button type="submit" class="btn-primary">Simpan Perubahan</button>
                 <button type="button" onclick="loadProfilePage(null)">Batal</button>
             </div>
@@ -181,6 +265,7 @@ function handleEditProfile(event) {
     const email = document.getElementById('editEmail').value;
     const gender = document.getElementById('editGender').value;
     const birthDate = document.getElementById('editBirthDate').value;
+    const experienceSummary = document.getElementById('editExperienceSummary').value;
 
     const messageElement = document.getElementById('editMessage');
     const userId = localStorage.getItem("CURRENT_USER_ID");
@@ -195,7 +280,8 @@ function handleEditProfile(event) {
             name: name,
             email: email,
             gender: gender,
-            birthDate: birthDate
+            birthDate: birthDate,
+            experienceSummary: experienceSummary
         })
     })
         .then(async res => {
@@ -224,14 +310,33 @@ function handleEditProfile(event) {
 
 function loadDefaultLanding(event, user) {
     preventDefault(event);
-    const mainContentArea = document.getElementById("main-content-area");
+    const container = document.getElementById("main-content-area");
 
+    // Jika status REVOKED, tampilkan informasi pencabutan TAPI jangan kunci aplikasi
+    if (user.memberStatus === 'REVOKED') {
+        container.innerHTML = `
+            <div class="revoked-banner">
+                <div class="revoked-icon">🚫</div>
+                <h2 style="color: #c53030;">Informasi Keanggotaan</h2>
+                <hr>
+                <p>Status Anda di organisasi sebelumnya telah <b>Dicabut</b>.</p>
+                <div class="reason-box">
+                    <strong>Alasan dari Pimpinan:</strong><br>
+                    "${user.revokeReason || 'Tidak disebutkan.'}"
+                </div>
+                <p>Anda saat ini berstatus bebas. Anda bisa mencari organisasi baru melalui menu di bawah ini.</p>
+                <button onclick="resetToNonMember(${user.id})" class="btn-primary">Cari Organisasi Baru</button>
+            </div>
+        `;
+        return;
+    }
+
+    // Alur role normal (Admin, Pimpinan, Anggota)
     if (user.role === "ADMIN") {
         loadAdminDashboard(user);
     } else if (user.role === "PIMPINAN") {
         loadPimpinanDashboard(user);
     } else {
-        // 🛑 KONSEP BARU: ANGGOTA MELIHAT STATUS KEANGGOTAAN
         loadUserStatusSummary(user);
     }
 }
@@ -271,7 +376,12 @@ function loadUserStatusSummary(user) {
 // 3. Daftar Organisasi (Dipanggil dari Sidebar)
 function loadOrgListPage(event, user) {
     preventDefault(event);
-    // 🛑 KITA GUNAKAN loadOrganizationListDashboard yang sudah ada sebagai logic utamanya
+    updatePageTitle("Daftar Organisasi");
+
+    // 🛑 FIX: Catat asal halaman agar tombol "Kembali" di profil tidak nyasar
+    LAST_PAGE_BEFORE_PROFILE = 'org-list';
+
+    history.pushState({ section: 'orgList' }, "Daftar Organisasi", "#org-list");
     loadOrganizationListDashboard(event, user);
 }
 
@@ -296,7 +406,9 @@ function loadOrganizationList() {
                 tableBody.innerHTML += `
                     <tr>
                         <td>${org.id}</td>
-                        <td>${org.name}</td>
+                        <td><a href="#" class="org-link" onclick="loadOrganizationProfile(${org.id}, event)">
+                                    ${org.name}
+                                </a></td>
                         <td>${org.status}</td>
                         <td>
                             <button onclick="openAssignPimpinanModal(${org.id}, '${org.name}')">Assign Pimpinan</button>
@@ -308,6 +420,127 @@ function loadOrganizationList() {
         })
         .catch(err => {
             tableBody.innerHTML = `<tr><td colspan="4" style="color: red;">[Error]: ${err.message}</td></tr>`;
+        });
+}
+
+function loadEditOrganizationPage() {
+    updatePageTitle("Kelola Organisasi");
+    const currentOrgId = GLOBAL_USER.organization ? GLOBAL_USER.organization.id : null;
+
+    if (window.location.hash !== '#kelola-org') {
+        history.pushState({ section: 'kelola-org' }, "Kelola Organisasi", "#kelola-org");
+    }
+
+    const container = document.getElementById('main-content-area');
+    const org = GLOBAL_USER.organization;
+
+    if (!org) {
+        showToast("Anda belum terikat dengan organisasi manapun.", "error");
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="header-with-action">
+            <h3>Kelola Profil Organisasi</h3>
+            <p>Perbarui informasi publik organisasi Anda di sini.</p>
+        </div>
+        <hr>
+        <form id="fullOrgEditForm" class="profile-edit-form">
+            <div class="grid-2-col">
+                <div class="form-group">
+                    <label>Nama Organisasi</label>
+                    <input type="text" id="editOrgName" value="${org.name || ''}" required>
+                </div>
+                <div class="form-group">
+                    <label>Tanggal Berdiri</label>
+                    <input type="date" id="editOrgDate" value="${org.establishedDate || ''}">
+                </div>
+                <div class="form-group">
+                    <label>Bidang</label>
+                    <input type="text" id="editOrgField" value="${org.field || ''}" placeholder="Pendidikan, Sosial, dll.">
+                </div>
+                <div class="form-group">
+                    <label>Lingkup</label>
+                    <input type="text" id="editOrgScope" value="${org.scope || ''}" placeholder="Nasional, Kampus, dll.">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Deskripsi Singkat</label>
+                <textarea id="editOrgDesc" rows="3">${org.description || ''}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Kriteria Keanggotaan (Aturan/Syarat)</label>
+                <textarea id="editOrgRequirement" rows="4" placeholder="Sebutkan syarat calon anggota, misal: Minimal Semester 3, Memiliki laptop, dll.">${org.membershipRequirement || ''}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Visi & Misi</label>
+                <textarea id="editOrgVision" rows="5">${org.visionMission || ''}</textarea>
+            </div>
+
+            <div class="grid-2-col">
+                <div class="form-group">
+                    <label>Alamat Kantor</label>
+                    <input type="text" id="editOrgAddress" value="${org.address || ''}">
+                </div>
+                <div class="form-group">
+                    <label>Tautan (Website/Sosmed)</label>
+                    <input type="url" id="editOrgLink" value="${org.externalLink || ''}" placeholder="https://...">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-success">Simpan Perubahan</button>
+                <button type="button" onclick="goBackFromProfile()" class="btn-secondary">Batal</button>
+            </div>
+        </form>
+    `;
+
+    document.getElementById('fullOrgEditForm').addEventListener('submit', handleFullOrgUpdate);
+}
+
+function handleFullOrgUpdate(event) {
+    event.preventDefault();
+    const orgId = GLOBAL_USER.organization.id;
+    const pimpinanId = GLOBAL_USER.id;
+
+    const updatedData = {
+        name: document.getElementById('editOrgName').value,
+        establishedDate: document.getElementById('editOrgDate').value,
+        field: document.getElementById('editOrgField').value,
+        scope: document.getElementById('editOrgScope').value,
+        description: document.getElementById('editOrgDesc').value,
+        visionMission: document.getElementById('editOrgVision').value,
+        address: document.getElementById('editOrgAddress').value,
+        externalLink: document.getElementById('editOrgLink').value,
+        membershipRequirement: document.getElementById('editOrgRequirement').value
+    };
+
+    // 🛑 Ganti ke 'PUT' atau 'PATCH' sesuai yang Anda definisikan di Controller Java
+    fetch(`/api/organizations/${orgId}?pimpinanId=${pimpinanId}`, {
+        method: 'PUT', // Jika masih error 405, ganti menjadi 'PATCH'
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData)
+    })
+        .then(async res => {
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(errorText || "Gagal memperbarui data organisasi.");
+            }
+            return res.json();
+        })
+        .then(updatedOrg => {
+            GLOBAL_USER.organization = updatedOrg;
+            showToast("Profil organisasi berhasil diperbarui!", "success");
+            // Segarkan sidebar untuk melihat perubahan nama (jika ada)
+            renderSidebar(GLOBAL_USER);
+            navigateTo('orgProfile-' + orgId, () => loadOrganizationProfile(orgId));
+        })
+        .catch(err => {
+            console.error(err);
+            showToast("Error: " + err.message, "error");
         });
 }
 
@@ -444,61 +677,96 @@ function submitAssignPimpinan() {
 // =========================================================================
 
 function loadPimpinanDashboard(user) {
-    preventDefault(null); // Fix bug event handler
+    preventDefault(null);
+    updatePageTitle("Kelola Anggota");
     const orgId = user.organization.id;
     const container = document.getElementById('main-content-area');
 
-    container.innerHTML = `
-        <h3>Manajemen Anggota Organisasi: ${user.organization.name}</h3>
-        <p id="pimpinanMessage" style="margin-bottom: 15px;"></p>
-        <hr>
-        
-        <div class="card-section">
-            <h4>Permintaan Gabung (PENDING)</h4>
-            <table id="pendingTable" class="data-table">
-                <thead><tr><th>Nama</th><th>Email</th><th>Alasan Gabung</th><th>Aksi</th></tr></thead>
-                <tbody><tr><td colspan="3">Memuat...</td></tr></tbody>
-            </table>
-        </div>
-
-        <div class="card-section" style="margin-top: 20px;">
-            <h4>Anggota Aktif (ACTIVE)</h4>
+    // 🛑 1. Ambil data dulu
+    fetch(`/api/users/organization/${orgId}/active`)
+        .then(res => res.json())
+        .then(members => {
+            CURRENT_ACTIVE_MEMBERS = members;
+            const activeOnly = members.filter(m => m.memberStatus === 'ACTIVE');
+            const totalActive = activeOnly.length;
             
-            <div class="search-sort-controls" style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <input type="text" id="keywordSearch" placeholder="Cari Nama/Email" style="padding: 5px;">
-                
-                <select id="sortBy" onchange="handleSearchAndSort(null, this.value)">
-                    <option value="name">Sort by Nama</option>
-                    <option value="email">Sort by Email</option>
-                    <option value="position">Sort by Jabatan</option> // 🛑 TAMBAHKAN INI
-                    <option value="joinDate">Sort by Tanggal Gabung</option>
-                </select>
-                
-                <select id="sortDirection" onchange="handleSearchAndSort(null, null, this.value)">
-                    <option value="ASC">A-Z (Ascending)</option>
-                    <option value="DESC">Z-A (Descending)</option>
-                </select>
-                
-                <button onclick="handleSearchAndSort(document.getElementById('keywordSearch').value)">Search</button>
-            </div>
-                <table id="activeTable" class="data-table">
-                    <thead>
-                        <tr><th>No</th><th>Nama</th><th>Email</th><th>Jabatan</th><th>Tanggal Gabung</th><th>No Anggota</th><th>Jenis Kelamin</th><th>Aksi</th></tr> 
-                    </thead>
-                    <tbody><tr><td colspan="5">Memuat...</td></tr></tbody>
-                </table>
-            <div id="paginationControls" style="margin-top: 10px; text-align: center;"></div>
-        </div>
-    `;
+            // 2. Yang sedang mengajukan pengunduran diri
+            const resignRequests = members.filter(m => m.memberStatus === 'RESIGN_REQUESTED');
 
-    loadPending(orgId);
-    loadActive(orgId);
+            const bidangOptions = Array.from(new Set(
+                members.map(m => extractBidangFromPosition(m.position))
+            )).map(b => `<option value="${b}">${b}</option>`).join('');
 
-    document.getElementById('keywordSearch').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            handleSearchAndSort(this.value);
-        }
-    });
+            // 🛑 2. Pasang HTML ke Container
+            container.innerHTML = `
+                <h3>Manajemen Anggota: ${user.organization.name}</h3>
+                <hr>
+                
+                <div class="card-section">
+                    <h4>Permintaan Gabung (PENDING)</h4>
+                    <table id="pendingTable" class="data-table">
+                        <thead><tr><th>Nama</th><th>Email</th><th>Alasan</th><th>Aksi</th></tr></thead>
+                        <tbody><tr><td colspan="3">Memuat...</td></tr></tbody>
+                    </table>
+                </div>
+
+                <div class="card-section" style="margin-top: 20px; border-left: 4px solid #e53e3e;">
+                    <h4>Permintaan Mengundurkan Diri</h4>
+                    <table id="resignRequestTable" class="data-table">
+                        <thead><tr><th>Nama</th><th>Email</th><th>Alasan Keluar</th><th>Aksi</th></tr></thead>
+                        <tbody>
+                            ${resignRequests.length === 0 ? '<tr><td colspan="3" class="text-muted">Tidak ada permintaan.</td></tr>' : 
+                                resignRequests.map(u => `
+                                <tr>
+                                    <td><b>${u.name}</b><br><small>${u.position || 'Anggota'}</small></td>
+                                    <td>${u.email}</td> <td><i>"${u.applicationReason || '-'}"</i></td>
+                                    <td>
+                                        <button onclick="processResign(${u.id}, 'APPROVE')" class="btn-danger btn-small">Setujui</button>
+                                        <button onclick="processResign(${u.id}, 'REJECT')" class="btn-secondary btn-small">Tolak</button>
+                                    </td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card-section" style="margin-top: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h4>Anggota Aktif ( ${totalActive} Orang )</h4>
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="keywordSearch" placeholder="Cari...">
+                            <select id="activeBidangFilter" onchange="filterAndSortActiveMembers()">
+                                <option value="">Semua Bidang</option>
+                                ${bidangOptions}
+                            </select>
+                            <select id="activeSort" onchange="filterAndSortActiveMembers()">
+                                <option value="name-asc">Nama (A-Z)</option>
+                                <option value="rank">Jabatan Tertinggi</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table id="activeTable" class="data-table">
+                        <thead>
+                            <tr><th>No</th><th>Nama</th><th>Email</th><th>Jabatan</th><th>No. Anggota</th><th>Gender</th><th>Tgl Gabung</th><th>Aksi</th></tr> 
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            `;
+
+            // 🛑 3. BARU PASANG LISTENER (Setelah element keywordSearch dipastikan ada)
+            const searchInput = document.getElementById('keywordSearch');
+            if (searchInput) {
+                searchInput.addEventListener('input', filterAndSortActiveMembers);
+                searchInput.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') handleSearchAndSort(this.value);
+                });
+            }
+
+            // 🛑 4. Jalankan pengisian tabel data lainnya
+            loadPending(orgId);
+            filterAndSortActiveMembers();
+        })
+        .catch(err => console.error("Gagal memuat dashboard:", err));
 }
 
 function loadPending(orgId) {
@@ -509,7 +777,7 @@ function loadPending(orgId) {
         })
         .then(users => {
             const tableBody = document.querySelector("#pendingTable tbody");
-            tableBody.innerHTML = ''; 
+            tableBody.innerHTML = '';
 
             if (users.length === 0) {
                 tableBody.innerHTML = `<tr><td colspan="4">Tidak ada permintaan Bergabung</td></tr>`; // 🛑 Ganti colspan menjadi 4
@@ -519,7 +787,7 @@ function loadPending(orgId) {
                 const reason = u.applicationReason || 'Tidak ada alasan spesifik.';
                 tableBody.innerHTML += `
                     <tr>
-                        <td>${u.name}</td>
+                        <td><a href="#" onclick="loadUserProfile(${u.id}, event)">${u.name}</a></td>
                         <td>${u.email}</td>
                         <td>${reason}</td> <td>
                             <button onclick="approve(${u.id})" class="btn-success">Approve</button>
@@ -532,6 +800,79 @@ function loadPending(orgId) {
         .catch(err => {
             document.querySelector("#pendingTable tbody").innerHTML = `<tr><td colspan="4" style="color: red;">${err.message}</td></tr>`; // 🛑 Ganti colspan menjadi 4
         });
+}
+
+function loadActiveList(orgId) {
+    // Fetch data tanpa pagination agar bisa di-sort secara dinamis di JS
+    fetch(`/api/users/organization/${orgId}/active`)
+        .then(res => res.json())
+        .then(members => {
+            CURRENT_ACTIVE_MEMBERS = members;
+            filterAndSortActiveMembers();
+        })
+        .catch(err => console.error("Gagal memuat anggota:", err));
+}
+
+function filterAndSortActiveMembers() {
+    const keyword = document.getElementById('keywordSearch').value.toLowerCase();
+    const sortVal = document.getElementById('activeSort').value;
+    const bidangFilter = document.getElementById('activeBidangFilter').value; // 🛑 AMBIL NILAI FILTER
+    const tableBody = document.querySelector("#activeTable tbody");
+
+    // 1. FILTERING
+    let result = CURRENT_ACTIVE_MEMBERS.filter(u => {
+        const isActive = u.memberStatus === 'ACTIVE'; // Hanya yang aktif
+        const matchSearch = u.name.toLowerCase().includes(keyword) || u.email.toLowerCase().includes(keyword);
+        return isActive && matchSearch;
+    });
+
+    // 2. SORTING
+    if (sortVal === 'name-asc') result.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortVal === 'name-desc') result.sort((a, b) => b.name.localeCompare(a.name));
+    else if (sortVal === 'date-new') result.sort((a, b) => new Date(b.joinDate) - new Date(a.joinDate));
+    else if (sortVal === 'date-old') result.sort((a, b) => new Date(a.joinDate) - new Date(b.joinDate));
+    else if (sortVal === 'no-anggota') {
+        result.sort((a, b) => {
+            if (!a.memberNumber && b.memberNumber) return 1;  // Kosong ke bawah
+            if (a.memberNumber && !b.memberNumber) return -1;
+            if (!a.memberNumber && !b.memberNumber) return 0;
+            return a.memberNumber.localeCompare(b.memberNumber, undefined, { numeric: true });
+        });
+    }
+    else if (sortVal === 'rank') {
+        const getRank = (pos) => {
+            const p = (pos || "").toLowerCase();
+            if (p.includes("ketua") || p.includes("pimpinan")) return 1;
+            if (p.includes("koordinator") || p.includes("kabid") || p.includes("kepala")) return 2;
+            if (p.includes("sekretaris") || p.includes("bendahara")) return 3;
+            return 4; // Anggota Biasa
+        };
+        result.sort((a, b) => getRank(a.position) - getRank(b.position));
+    }
+
+    // 3. RENDER
+    tableBody.innerHTML = '';
+    result.forEach((u, index) => {
+        const showRevoke = GLOBAL_USER.id != u.id;
+        tableBody.innerHTML += `
+            <tr>
+                <td>${index + 1}.</td>
+                <td title="${u.name}"><a href="#" class="member-link-text" onclick="viewMemberProfile(${u.id}, 'kelola'); return false;">${u.name}</a></td>
+                <td title="${u.email}">${u.email}</td>
+                <td title="${u.position || 'Anggota'}">${u.position || 'Anggota'}</td>
+                <td>${u.memberNumber || '-'}</td>
+                <td>${u.gender === 'MALE' ? 'Laki-laki' : u.gender === 'FEMALE' ? 'Perempuan' : '-'}</td>
+                <td title="${formatIndoDate(u.joinDate)}">${formatIndoDate(u.joinDate)}</td>
+                <td class="action-cell">
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-start;">
+                        <button onclick="openEditPositionModal(${u.id}, '${u.name}', '${u.position || 'Anggota'}')" class="btn-primary btn-small">Edit Jabatan</button>
+                        <button onclick="openEditMemberNumberModal(${u.id}, '${u.name}', '${u.memberNumber || 'N/A'}')" class="btn-primary btn-small">Edit No Anggota</button>
+                        ${showRevoke ? `<button onclick="revokeMember(${u.id})" class="btn-danger btn-small">Cabut Keanggotaan</button>` : ''}
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
 }
 
 function loadActive(orgId) {
@@ -562,18 +903,22 @@ function loadActive(orgId) {
             users.forEach((u, index) => { // Gunakan index dari forEach
                 const rowNumber = startIndex + index + 1; // 🛑 NOMOR URUT
 
+                const showRevoke = GLOBAL_USER.id != u.id;
+
                 tableBody.innerHTML += `
                     <tr>
                         <td>${rowNumber}.</td>
-                        <td>${u.name}</td>
+                        <td><a href="#" onclick="viewMemberProfile(${u.id}, 'kelola'); return false;">${u.name}</a></td>
                         <td>${u.email}</td>
                         <td>${u.position || 'Anggota'}</td>
                         <td>${u.joinDate || 'N/A'}</td>
                         <td>${u.memberNumber || 'N/A'}</td>
                         <td>${u.gender === 'MALE' ? 'Laki-laki' : u.gender === 'FEMALE' ? 'Perempuan' : 'N/A'}</td>
                         <td class="action-cell"> 
-                            <button onclick="openEditPositionModal(${u.id}, '${u.name}', '${u.position || 'Anggota Biasa'}')" class="btn-primary">Edit Jabatan</button>
-                            <button onclick="openEditMemberNumberModal(${u.id}, '${u.name}', '${u.memberNumber || 'N/A'}')" class="btn-primary">Edit No Anggota</button>
+                            <button onclick="openEditPositionModal(${u.id}, '${u.name}', '${u.position || 'Anggota Biasa'}')" class="btn-primary btn-small">Edit Jabatan</button>
+                            <button onclick="openEditMemberNumberModal(${u.id}, '${u.name}', '${u.memberNumber || 'N/A'}')" class="btn-primary btn-small">Edit No</button>
+
+                            ${showRevoke ? `<button onclick="revokeMember(${u.id})" class="btn-danger btn-small">Cabut Anggota</button>` : ''}
                         </td>
                     </tr>
                 `;
@@ -620,37 +965,41 @@ function handlePagination(pageNumber) {
 
 function approve(targetUserId) {
     const approverId = localStorage.getItem("CURRENT_USER_ID");
-    const messageElement = document.getElementById("pimpinanMessage");
-    messageElement.innerText = "Memproses Approve...";
-
+    
+    // 🛑 HAPUS bagian pimpinanMessage.innerText karena ID tersebut sudah tidak ada di HTML baru
+    
     fetch(`/api/users/${approverId}/approve/${targetUserId}`, { method: "PUT" })
-        .then(res => {
-            if (!res.ok) return res.text().then(text => { throw new Error(text || "Gagal Approve.") });
-            messageElement.style.color = "green";
-            messageElement.innerText = `Anggota ID ${targetUserId} berhasil di-Approve.`;
-            setTimeout(() => location.reload(), 1500);
+        .then(async res => {
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || "Gagal Approve.");
+            }
+            // 🛑 Gunakan Toast agar lebih bersih
+            showToast("Anggota berhasil disetujui!", "success");
+            
+            // Muat ulang dashboard tanpa refresh halaman penuh
+            loadPimpinanDashboard(GLOBAL_USER);
         })
         .catch(err => {
-            messageElement.style.color = "red";
-            messageElement.innerText = err.message;
+            showToast(err.message, "error");
         });
 }
 
 function reject(targetUserId) {
     const approverId = localStorage.getItem("CURRENT_USER_ID");
-    const messageElement = document.getElementById("pimpinanMessage");
-    messageElement.innerText = "Memproses Reject...";
 
     fetch(`/api/users/${approverId}/reject/${targetUserId}`, { method: "PUT" })
-        .then(res => {
-            if (!res.ok) return res.text().then(text => { throw new Error(text || "Gagal Reject.") });
-            messageElement.style.color = "green";
-            messageElement.innerText = `Anggota ID ${targetUserId} berhasil di-Reject.`;
-            setTimeout(() => location.reload(), 1500);
+        .then(async res => {
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || "Gagal Reject.");
+            }
+            showToast("Permintaan bergabung ditolak.", "success");
+            
+            loadPimpinanDashboard(GLOBAL_USER);
         })
         .catch(err => {
-            messageElement.style.color = "red";
-            messageElement.innerText = err.message;
+            showToast(err.message, "error");
         });
 }
 
@@ -713,137 +1062,132 @@ function requestJoin(organizationId, organizationName) {
 // === FUNGSI UNIVERSAL (DAFTAR ORGANISASI) ================================
 // =========================================================================
 
-function loadOrganizationListDashboard(event, user) {
-    preventDefault(event);
+// 🛑 Tambahkan kata 'async' di depan function
+async function loadOrganizationListDashboard(event, user) {
+    if (event) preventDefault(event);
     const container = document.getElementById('main-content-area');
+    LAST_PAGE_BEFORE_PROFILE = 'org-list';
 
-    // Markup HTML untuk Kontrol Search & Sort
+    // Ambil data bidang secara dinamis dari database
+    let fieldOptions = "";
+    try {
+        const res = await fetch('/api/organizations');
+        const allOrgs = await res.json();
+        const uniqueFields = [...new Set(allOrgs.map(o => o.field).filter(f => f))].sort();
+        fieldOptions = uniqueFields.map(f => `<option value="${f}">${f}</option>`).join('');
+    } catch (err) {
+        console.error("Gagal memuat bidang:", err);
+    }
+
     container.innerHTML = `
         <h3>Daftar Organisasi Aktif</h3>
         <p>Anda dapat melihat daftar organisasi. Status Anda: <b>${user.memberStatus}</b>.</p>
-        
         <hr>
 
-        <div class="search-sort-controls" style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <input type="text" id="orgKeywordSearch" placeholder="Cari Nama Organisasi" style="padding: 5px;">
+        <div class="search-sort-controls" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <input type="text" id="orgKeywordSearch" placeholder="Cari Nama Organisasi..." style="flex: 1; min-width: 200px;">
             
-            <select id="orgSortBy" onchange="handleOrgListSortAndSearch(null, this.value)">
-                <option value="name">Sort by Nama</option>
-                <option value="description">Sort by Deskripsi</option>
+            <select id="orgFilterField" onchange="handleOrgListSortAndSearch(null)">
+                <option value="">Semua Bidang</option>
+                ${fieldOptions}
+                <option value="Umum">Umum/Lainnya</option>
             </select>
-            
+
             <select id="orgSortDirection" onchange="handleOrgListSortAndSearch(null, null, this.value)">
-                <option value="ASC">A-Z (Ascending)</option>
-                <option value="DESC">Z-A (Descending)</option>
+                <option value="ASC">Urutkan Nama A-Z</option>
+                <option value="DESC">Urutkan Nama Z-A</option>
             </select>
             
-            <button onclick="handleOrgListSortAndSearch(document.getElementById('orgKeywordSearch').value)">Search</button>
+            <button onclick="handleOrgListSortAndSearch(document.getElementById('orgKeywordSearch').value)" class="btn-primary">Cari</button>
         </div>
+
         <table id="organizationList" class="data-table">
             <thead>
                 <tr>
                     <th>Nama Organisasi</th>
+                    <th>Bidang</th>
                     <th>Deskripsi</th>
-                    <th>Status</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
-            <tbody><tr><td colspan="3">Memuat...</td></tr></tbody>
+            <tbody><tr><td colspan="4">Memuat...</td></tr></tbody>
         </table>
-        <p id="dashboardJoinMessage" style="margin-top: 15px;"></p>
         <div id="orgPaginationControls" style="margin-top: 10px; text-align: center;"></div>
     `;
 
-    document.getElementById('orgKeywordSearch').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            handleOrgListSortAndSearch(this.value);
-        }
-    });
-
     loadOrgList(user);
 }
-
 function loadOrgList(user) {
-    const encodedKeyword = encodeURIComponent(orgCurrentKeyword);
+    const keyword = encodeURIComponent(orgCurrentKeyword);
+    const fieldSelect = document.getElementById('orgFilterField');
+    const field = fieldSelect ? fieldSelect.value : "";
 
-    const endpoint = `/api/organizations/search?keyword=${encodedKeyword}&page=${orgCurrentPage}&size=10&sortBy=${orgCurrentSortBy}&sortDirection=${orgCurrentSortDirection}`;
+    // Gunakan 5 parameter asli agar sinkron dengan ServiceImpl
+    const endpoint = `/api/organizations/search?keyword=${keyword}&page=${orgCurrentPage}&size=10&sortBy=${orgCurrentSortBy}&sortDirection=${orgCurrentSortDirection}`;
 
     const tableBody = document.querySelector("#organizationList tbody");
     const paginationControls = document.getElementById('orgPaginationControls');
 
     if (!tableBody) return;
-    tableBody.innerHTML = `<tr><td colspan="3">Memuat data Organisasi...</td></tr>`;
-    if (paginationControls) paginationControls.innerHTML = '';
+    tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>`;
 
     fetch(endpoint)
         .then(res => {
-            if (!res.ok) {
-                return res.text().then(text => { throw new Error(text || "Gagal memuat daftar organisasi.") });
-            }
+            if (!res.ok) throw new Error("Gagal mengambil data dari server.");
             return res.json();
         })
         .then(organizations => {
             tableBody.innerHTML = '';
+            let listToRender = organizations.content || organizations;
 
-            const listToRender = organizations.content || organizations;
+            // 🛑 Filter Bidang di JS agar Backend tidak perlu diubah
+            if (field !== "") {
+                listToRender = listToRender.filter(o => (o.field || "Umum") === field);
+            }
 
             if (listToRender.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="3">Tidak ada organisasi yang ditemukan.</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px;">Organisasi tidak ditemukan.</td></tr>`;
                 return;
             }
 
             listToRender.forEach(org => {
                 if (org.status === "ACTIVE") {
-                    let actionButton = `<span style="color: gray;">Tidak Ada Aksi</span>`;
-                    let memberStatusDisplay = `<span style="color: gray;">NON_MEMBER</span>`; // Default status
+                    const isMember = user.organization && user.organization.id === org.id;
+                    let actionBtn = `<button onclick="openJoinModal(${org.id}, '${org.name}')" class="btn-success btn-small">Gabung</button>`;
 
-                    const isMemberOfOrg = user.organization && user.organization.id === org.id;
-
-                    if (user.memberStatus === "NON_MEMBER") {
-                        // Jika NON_MEMBER, selalu tampilkan tombol Ajukan Gabung (di kolom Aksi)
-                        actionButton = `<button onclick="openJoinModal(${org.id}, '${org.name}')" class="btn-success">Ajukan Gabung</button>`;
-                        memberStatusDisplay = `<span style="color: gray;">NON_MEMBER</span>`;
-                    } else if (isMemberOfOrg) {
-                        // Jika sudah ACTIVE/PENDING di organisasi ini
-                        memberStatusDisplay = user.memberStatus; // Tampilkan status asli
-                        if (user.memberStatus === "PENDING") {
-                            actionButton = `<span class="text-warning">Menunggu Persetujuan</span>`;
-                        } else if (user.memberStatus === "ACTIVE") {
-                            actionButton = `<span class="text-success">Anggota Aktif</span>`;
-                        }
-                    } else {
-                        // Anggota ACTIVE/PENDING di ORG LAIN, dan melihat ORG ini
-                        memberStatusDisplay = `<span style="color: gray;">NON_MEMBER</span>`; // Statusnya NON_MEMBER di organisasi yang sedang dilihat ini
-                        actionButton = `<span style="color: gray;">Tidak Ada Aksi</span>`; // Tidak bisa gabung lagi
+                    if (isMember) {
+                        actionBtn = `<b class="text-success">Anggota Aktif</b>`;
+                    } else if (user.memberStatus !== "NON_MEMBER") {
+                        actionBtn = `<span class="text-muted">-</span>`;
                     }
-                    
-                    // 🛑 Jika user ACTIVE/PENDING di ORG LAIN, status tetap NON_MEMBER di org ini.
-                    
+
                     tableBody.innerHTML += `
                         <tr>
-                            <td>${org.name}</td>
-                            <td>${org.description || 'Tidak ada deskripsi'}</td>
-                            <td>${memberStatusDisplay}</td> <td>${actionButton}</td>
+                            <td><a href="#" class="org-link" onclick="loadOrganizationProfile(${org.id}, event)">${org.name}</a></td>
+                            <td><span class="badge" style="background:#edf2f7; color:#4a5568;">${org.field || 'Umum'}</span></td>
+                            <td class="desc-cell" style="white-space: normal !important; word-wrap: break-word;">${org.description || '-'}</td>
+                            <td style="text-align:center;">${actionBtn}</td>
                         </tr>
                     `;
                 }
             });
 
-            // Logic Pagination Controls
-            if (organizations.totalPages && organizations.totalPages > 1) {
-                const pageData = organizations;
-
-                if (!pageData.first) {
-                    paginationControls.innerHTML += `<button onclick="handleOrgListPagination(${pageData.number - 1})">Prev</button> `;
-                }
-                paginationControls.innerHTML += `<span>Halaman ${pageData.number + 1} dari ${pageData.totalPages}</span>`;
-                if (!pageData.last) {
-                    paginationControls.innerHTML += ` <button onclick="handleOrgListPagination(${pageData.number + 1})">Next</button>`;
+            // Logic Pagination Sederhana
+            if (paginationControls) {
+                paginationControls.innerHTML = '';
+                if (organizations.totalPages > 1) {
+                    if (!organizations.first) {
+                        paginationControls.innerHTML += `<button onclick="handleOrgListPagination(${organizations.number - 1})">Prev</button> `;
+                    }
+                    paginationControls.innerHTML += `<span>Halaman ${organizations.number + 1} dari ${organizations.totalPages}</span>`;
+                    if (!organizations.last) {
+                        paginationControls.innerHTML += ` <button onclick="handleOrgListPagination(${organizations.number + 1})">Next</button>`;
+                    }
                 }
             }
         })
         .catch(err => {
-            document.getElementById('main-content-area').innerHTML += `<p class="text-error">Gagal memuat daftar organisasi: ${err.message}</p>`;
+            tableBody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">${err.message}</td></tr>`;
         });
 }
 
@@ -869,10 +1213,20 @@ function handleOrgListPagination(pageNumber) {
 
 // 🛑 FUNGSI BARU: Membuka Modal
 function openJoinModal(organizationId, organizationName) {
+    const isProfileComplete = GLOBAL_USER.experienceSummary && GLOBAL_USER.experienceSummary.trim().length > 10;
+
     const modalHtml = `
         <div id="joinModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 101;">
             <div style="background: white; width: 450px; margin: 100px auto; padding: 25px; border-radius: 8px;">
                 <h4>Ajukan Gabung: ${organizationName}</h4>
+
+                ${!isProfileComplete ? `
+                    <div class="warning-box" style="background: #fff5f5; color: #c53030; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #feb2b2;">
+                        <strong>⚠️ Profil Belum Lengkap!</strong><br>
+                        Pimpinan mewajibkan ringkasan pengalaman organisasi. Silakan lengkapi di menu <b>Profil Saya</b> sebelum melamar.
+                    </div>
+                ` : `
+
                 <p>Jelaskan secara singkat alasan Anda ingin bergabung (Opsional).</p>
                 
                 <form id="joinForm">
@@ -883,12 +1237,16 @@ function openJoinModal(organizationId, organizationName) {
                     <button type="button" onclick="closeJoinModal()" style="background-color: #6c757d;">Batal</button>
                     <p id="joinModalMessage" style="margin-top: 10px; color: red;"></p>
                 </form>
+            `}
+                ${!isProfileComplete ? `<button type="button" onclick="closeJoinModal()" class="btn-secondary" style="width:100%">Tutup</button>` : ''}
             </div>
         </div>
     `;
 
     document.getElementById('main-content-area').insertAdjacentHTML('afterend', modalHtml);
-    document.getElementById('joinForm').addEventListener('submit', handleJoinSubmit);
+    if (isProfileComplete) {
+        document.getElementById('joinForm').addEventListener('submit', handleJoinSubmit);
+    }
 }
 
 function closeJoinModal() {
@@ -1061,3 +1419,1241 @@ function handleMemberNumberSubmit(event) {
             message.innerText = err.message || "Terjadi error tak terduga saat mengubah nomor anggota.";
         });
 }
+
+function searchProkerList(keyword) {
+    const filtered = CACHED_PROKERS.filter(p =>
+        p.title.toLowerCase().includes(keyword.toLowerCase()) ||
+        (p.description && p.description.toLowerCase().includes(keyword.toLowerCase()))
+    );
+    renderProkerList(filtered);
+}
+
+function updateProkerStats(stats) {
+    const map = {
+        'statTotal': stats.TOTAL,
+        'statPending': stats.PENDING,     // Baru
+        'statPlanned': stats.PLANNED,
+        'statOngoing': stats.ON_GOING,
+        'statCompleted': stats.COMPLETED,
+        'statRejected': stats.REJECTED    // Baru
+    };
+
+    for (const [id, value] of Object.entries(map)) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    }
+}
+
+function openAddProkerModal() {
+    const orgId = GLOBAL_USER.organization.id;
+
+    // 1. Ambil daftar anggota aktif untuk Dropdown PIC
+    fetch(`/api/users/organization/${orgId}/active`)
+        .then(res => res.json())
+        .then(members => {
+            let picOptions = members.map(m => `<option value="${m.id}">${m.name} (${m.position || 'Anggota'})</option>`).join('');
+
+            const modalHtml = `
+                <div id="prokerModal" class="modal-overlay">
+                    <div class="modal-content">
+                        <h4>Tambah Program Kerja Baru</h4>
+                        <form id="prokerForm">
+                            <label>Judul Proker</label>
+                            <input type="text" id="prokerTitle" required placeholder="Contoh: Bakti Sosial Desa">
+                            
+                            <label>Deskripsi</label>
+                            <textarea id="prokerDesc" rows="3" placeholder="Jelaskan detail kegiatan..."></textarea>
+                            
+                            <div class="grid-2-col">
+                                <div>
+                                    <label>Tanggal Mulai</label>
+                                    <input type="date" id="prokerStart" max="9999-12-31" required>
+                                </div>
+                                <div>
+                                    <label>Tanggal Selesai</label>
+                                    <input type="date" id="prokerEnd" max="9999-12-31" required>
+                                </div>
+                                <div>
+                                    <label>Total Anggaran (Rp)</label>
+                                    <input type="number" id="prokerAnggaran" placeholder="Contoh: 500000">
+                                </div>
+                                <div>
+                                    <label>Rincian Anggaran Singkat</label>
+                                    <textarea id="prokerRincian" rows="2" placeholder="Contoh: Konsumsi Rp.300rb, Banner Rp.200rb"></textarea>
+                                </div>
+                            </div>
+
+                            <label>Penanggung Jawab (PIC)</label>
+                            <select id="prokerPic" required>
+                                <option value="">-- Pilih Anggota --</option>
+                                ${picOptions}
+                            </select>
+
+                            <div class="modal-actions">
+                                <button type="submit" class="btn-success">Ajukan Proker</button>
+                                <button type="button" onclick="closeProkerModal()" class="btn-secondary">Batal</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            document.getElementById('prokerForm').addEventListener('submit', handleProkerSubmit);
+        })
+        .catch(err => showToast("Gagal mengambil daftar anggota: " + err.message, "error"));
+}
+
+function closeProkerModal() {
+    const modal = document.getElementById('prokerModal');
+    if (modal) modal.remove();
+}
+
+function handleProkerSubmit(event) {
+    event.preventDefault();
+
+    const startDate = document.getElementById('prokerStart').value;
+    const endDate = document.getElementById('prokerEnd').value;
+
+    // 🛑 VALIDASI TAHUN: Cek jika tahun lebih dari 4 digit
+    const startYear = new Date(startDate).getFullYear();
+    const endYear = new Date(endDate).getFullYear();
+
+    if (startYear > 9999 || endYear > 9999) {
+        showToast("⚠️ Format tanggal salah! Tahun maksimal adalah 4 digit (9999).", "error");
+        return;
+    }
+
+    const orgId = GLOBAL_USER.organization.id;
+    const creatorId = GLOBAL_USER.id;
+    const picId = document.getElementById('prokerPic').value;
+
+    if (!picId) {
+        showToast("Harap pilih Penanggung Jawab (PIC)", "error");
+        return;
+    }
+
+    const prokerData = {
+        title: document.getElementById('prokerTitle').value,
+        description: document.getElementById('prokerDesc').value,
+        startDate: document.getElementById('prokerStart').value,
+        endDate: document.getElementById('prokerEnd').value,
+        totalAnggaran: parseFloat(document.getElementById('prokerAnggaran').value) || 0, // Ambil nilai anggaran
+        rincianAnggaran: document.getElementById('prokerRincian').value // Ambil rincian
+    };
+
+    // Pastikan URL endpoint sesuai dengan Controller di Backend
+    fetch(`/api/proker/org/${orgId}?creatorId=${creatorId}&picId=${picId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prokerData)
+    })
+        .then(async res => {
+            if (!res.ok) {
+                // 🛑 Jika server tetap kirim error 400 karena format JSON
+                if (res.status === 400) throw new Error("Gagal menyimpan. Harap perhatikan format tanggal.");
+                const errorMsg = await res.text();
+                throw new Error(errorMsg);
+            }
+            return res.json();
+        })
+        .then(() => {
+            showToast("Program Kerja berhasil diajukan! Menunggu persetujuan pimpinan.", "success");
+            closeProkerModal();
+            fetchProker(orgId); // Refresh daftar proker
+        })
+        .catch(err => {
+            console.error(err);
+            showToast(err.message, "error");
+        });
+}
+
+function approveProker(prokerId) {
+    const pimpinanId = GLOBAL_USER.id;
+
+    // Panggil customConfirm dengan callback
+    customConfirm("Setujui program kerja ini?", () => {
+        // Kode di bawah ini hanya jalan jika tombol "Ya" diklik
+        fetch(`/api/proker/${prokerId}/approve?pimpinanId=${pimpinanId}`, { method: 'PUT' })
+            .then(async res => {
+                if (!res.ok) throw new Error(await res.text());
+                showToast("Proker disetujui!", "success");
+                fetchProker(GLOBAL_USER.organization.id);
+            })
+            .catch(err => showToast(err.message, "error"));
+    });
+}
+
+function rejectProker(prokerId) {
+    const pimpinanId = GLOBAL_USER.id;
+
+    customConfirm("Tolak program kerja ini?", () => {
+        fetch(`/api/proker/${prokerId}/reject?pimpinanId=${pimpinanId}`, { method: 'PUT' })
+            .then(async res => {
+                if (!res.ok) throw new Error(await res.text());
+                showToast("Proker ditolak.", "error");
+                fetchProker(GLOBAL_USER.organization.id);
+            })
+            .catch(err => showToast(err.message, "error"));
+    });
+}
+
+function deleteProker(prokerId) {
+    const pimpinanId = GLOBAL_USER.id;
+
+    customConfirm("Hapus program kerja ini? Tindakan ini tidak dapat dibatalkan.", () => {
+
+        fetch(`/api/proker/${prokerId}?pimpinanId=${pimpinanId}`, { method: 'DELETE' })
+            .then(async res => {
+                if (!res.ok) throw new Error(await res.text());
+                showToast("Proker berhasil dihapus", "success");
+                fetchProker(GLOBAL_USER.organization.id);
+            })
+            .catch(err => showToast(err.message, "error"));
+    });
+}
+
+function updateStatus(prokerId, newStatus) {
+    const userId = GLOBAL_USER.id;
+
+    fetch(`/api/proker/${prokerId}/status?status=${newStatus}&userId=${userId}`, {
+        method: 'PUT'
+    })
+        .then(async res => {
+            if (!res.ok) throw new Error(await res.text());
+            showToast(`Status Proker diperbarui menjadi ${newStatus}`, "success");
+            fetchProker(GLOBAL_USER.organization.id);
+        })
+        .catch(err => showToast(err.message, "error"));
+}
+
+function loadOrganizationProfile(orgId, event) {
+    if (event) event.preventDefault();
+    const container = document.getElementById('main-content-area');
+    LAST_PAGE_BEFORE_PROFILE = 'org-list';
+    history.pushState({ section: 'orgProfile-' + orgId }, '', `#organization-${orgId}`);
+
+    fetch(`/api/organizations/${orgId}/details`)
+        .then(res => res.json())
+        .then(data => {
+            const org = data.organization;
+            const members = data.members;
+            CURRENT_ORG_MEMBERS = members; // Simpan ke cache lokal
+
+            // Mencari Pimpinan dari daftar anggota
+            const leader = members.find(m => m.role === 'PIMPINAN');
+            const isPimpinan = GLOBAL_USER.role === 'PIMPINAN' && GLOBAL_USER.organization.id === org.id;
+            const formattedDate = formatIndoDate(org.establishedDate);
+            updatePageTitle(`Profil ${org.name}`);
+
+            container.innerHTML = `
+                <div class="profile-header">
+                    <div class="header-content">
+                        <h2>${org.name}</h2>
+                        <p class="text-muted">${org.field || 'Bidang belum diatur'} | ${org.scope || 'Cakupan belum diatur'}</p>
+                        <p style="margin-top:10px;">👤 <b>Pimpinan:</b> 
+                            ${leader ?
+                    `<b class="member-link-text pimpinan-link" 
+                                    style="color: #2b6cb0; cursor: pointer; text-decoration: none;" 
+                                    onclick="viewMemberProfile(${leader.id}, 'org-detail')">
+                                    ${leader.name}
+                                </b>` :
+                    '<span class="text-muted">Belum ditetapkan</span>'
+                }
+                        </p>
+                    </div>
+                    ${isPimpinan ? `
+                    <button onclick="LAST_PAGE_BEFORE_PROFILE = 'org-detail'; navigateTo('kelola-org', () => loadEditOrganizationPage(), event)" 
+                            class="btn-primary">
+                        Edit Profil
+                    </button>` : ''}
+                </div>
+
+                <div class="org-detail-grid">
+                    <div class="detail-section">
+                        <h4>🏢 Tentang Kami</h4>
+                        <p>${org.description || 'Tidak ada deskripsi.'}</p>
+                        <p>📍 <b>Alamat:</b> ${org.address || '-'}</p>
+                        <p>🌐 <b>Tautan:</b> <a href="${org.externalLink}" target="_blank">${org.externalLink || '-'}</a></p>
+                        <div class="requirement-box" style="background: #fff5f5; padding: 15px; border-radius: 8px; border-left: 4px solid #e53e3e; margin-top: 15px;">
+                            <strong>📜 Kriteria Keanggotaan:</strong><br>
+                            <p style="margin-top: 5px;">${org.membershipRequirement || 'Tidak ada kriteria khusus.'}</p>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h4>🎯 Visi & Misi</h4>
+                        <p>${org.visionMission || 'Belum diatur.'}</p>
+                        <p>📅 <b>Berdiri Sejak:</b> ${formattedDate}</p>
+                        <p>📂 <b>Bidang:</b> ${org.field || '-'}</p>
+                        <p>🌎 <b>Lingkup:</b> ${org.scope || '-'}</p>
+                    </div>
+                </div>
+
+                <hr>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3>Daftar Anggota (${data.memberCount})</h3>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="memberSearch" placeholder="Cari nama atau no anggota..." 
+                               oninput="filterAndSortOrgMembers()" style="padding:8px; border-radius:5px; border:1px solid #ddd;">
+                        <select id="memberSort" onchange="filterAndSortOrgMembers()" style="padding:8px; border-radius:5px; border:1px solid #ddd;">
+                            <option value="name-asc">Urutkan Nama (A-Z)</option>
+                            <option value="name-desc">Urutkan Nama (Z-A)</option>
+                            <option value="rank">Jabatan Tertinggi</option>
+                            <option value="no-anggota">No. Anggota</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="orgMemberTableContainer"></div>
+            `;
+
+            filterAndSortOrgMembers();
+        })
+        .catch(err => showToast("Gagal memuat profil organisasi: " + err.message, "error"));
+}
+
+function loadUserProfile(userId, event) {
+    if (event) event.preventDefault();
+
+    history.pushState({ section: 'user-' + userId }, '', `/struktura#user-${userId}`);
+
+    const container = document.getElementById('main-content-area');
+
+    fetch(`/api/users/${userId}`)
+        .then(res => res.json())
+        .then(user => {
+            updatePageTitle(`Profil ${user.name}`);
+            const genderIndo = user.gender === 'MALE' ? 'Laki-laki' :
+                user.gender === 'FEMALE' ? 'Perempuan' : '-';
+
+            container.innerHTML = `
+                <div class="user-profile-card">
+                    <div class="user-avatar">${user.name.charAt(0)}</div>
+                    <h2>${user.name}</h2>
+                    <p class="user-role-badge">${user.role}</p>
+                    <hr>
+                    <div class="user-info-grid">
+                        <div class="info-item"><label>No Anggota</label><span>${user.memberNumber || 'Belum Ada'}</span></div>
+                        <div class="info-item"><label>Jabatan</label><span>${user.position || 'Anggota'}</span></div>
+                        <div class="info-item"><label>Organisasi</label><span>${user.organization ? user.organization.name : 'Tidak Terikat'}</span></div>
+                        <div class="info-item"><label>Email</label><span>${user.email}</span></div>
+                        <div class="info-item"><label>Jenis Kelamin</label><span>${genderIndo}</span></div>
+                        <div class="info-item"><label>Status</label><span class="badge status-active">ACTIVE</span></div>
+                    </div>
+                    <div class="experience-section">
+                        <h4>Ringkasan Pengalaman Organisasi</h4>
+                        <p>${user.experienceSummary || 'Belum ada data pengalaman yang diisi.'}</p>
+                    </div>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="goBackFromProfile()" class="btn-secondary">Kembali</button>
+                    </div>
+                </div>
+            `;
+        })
+        .catch(err => showToast("Gagal memuat profil: " + err.message, "error"));
+}
+
+function revokeMember(userId) {
+    const modalHtml = `
+        <div id="revokeModal" class="confirm-overlay">
+            <div class="confirm-box" style="width: 450px;">
+                <h4 style="color: #d9534f;">Cabut Akses Anggota</h4>
+                <p>Berikan alasan resmi pencabutan keanggotaan ini:</p>
+                <textarea id="revokeReasonInput" rows="4" 
+                    style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin: 15px 0;"
+                    placeholder="Masukkan alasan..."></textarea>
+                <div class="confirm-buttons">
+                    <button id="btnConfirmRevoke" class="btn-danger">Ya, Cabut</button>
+                    <button onclick="document.getElementById('revokeModal').remove()" class="btn-secondary">Batal</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    document.getElementById('btnConfirmRevoke').onclick = () => {
+        const reason = document.getElementById('revokeReasonInput').value;
+        if (!reason.trim()) {
+            showToast("Alasan wajib diisi!", "error");
+            return;
+        }
+
+        fetch(`/api/users/${userId}/revoke?reason=${encodeURIComponent(reason)}`, { method: 'POST' })
+            .then(res => {
+                if (res.ok) {
+                    showToast("Keanggotaan dicabut.", "success");
+                    document.getElementById('revokeModal').remove();
+                    loadActive(GLOBAL_USER.organization.id);
+                }
+            });
+    };
+}
+
+function openEditOrgModal(orgId) {
+    fetch(`/api/organizations/${orgId}`)
+        .then(res => res.json())
+        .then(org => {
+            const modalHtml = `
+                <div id="editOrgModal" class="modal-overlay">
+                    <div class="modal-content">
+                        <h3>Edit Profil Organisasi</h3>
+                        <label>Visi & Misi</label>
+                        <textarea id="editVision">${org.visionMission || ''}</textarea>
+                        <label>Alamat</label>
+                        <input type="text" id="editAddress" value="${org.address || ''}">
+                        <div class="modal-actions">
+                            <button onclick="saveOrgEdit(${orgId})" class="btn-success">Simpan</button>
+                            <button onclick="closeModal('editOrgModal')" class="btn-secondary">Batal</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        });
+}
+
+function saveOrgEdit(orgId) {
+    const pimpinanId = GLOBAL_USER.id;
+    const updatedData = {
+        visionMission: document.getElementById('editVision').value,
+        address: document.getElementById('editAddress').value
+    };
+
+    fetch(`/api/organizations/${orgId}?pimpinanId=${pimpinanId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData)
+    })
+        .then(async res => {
+            if (!res.ok) throw new Error(await res.text());
+            showToast("Profil organisasi diperbarui!", "success");
+            closeModal('editOrgModal');
+            loadOrganizationProfile(orgId); // Refresh halaman profil
+        })
+        .catch(err => showToast(err.message, "error"));
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.remove();
+}
+
+// Fungsi pembantu untuk menutup modal
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.remove();
+}
+
+function resetToNonMember(userId) {
+    fetch(`/api/users/${userId}/reset-status`, { method: 'PUT' })
+        .then(res => res.json())
+        .then(updatedUser => {
+            GLOBAL_USER = updatedUser;
+            showToast("Status berhasil diperbarui. Silakan pilih organisasi baru.", "success");
+            loadOrgListPage(null, GLOBAL_USER); // Arahkan ke daftar organisasi
+        })
+        .catch(err => showToast(err.message, "error"));
+}
+
+// Fungsi utilitas untuk mengubah YYYY-MM-DD menjadi format Indonesia
+function formatIndoDate(dateString) {
+    if (!dateString || dateString === 'N/A' || dateString === '-') return '-';
+
+    const months = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString; // Balikkan string asli jika bukan tanggal valid
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year}`;
+}
+
+function submitProkerFinal(prokerId, report) {
+    const userId = GLOBAL_USER.id;
+    fetch(`/api/proker/${prokerId}/finish?userId=${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ executionReport: report })
+    })
+        .then(async res => {
+            if (!res.ok) throw new Error(await res.text());
+            showToast("Laporan terkirim! Proker selesai.", "success");
+            document.getElementById('finishProkerModal').remove();
+            fetchProker(GLOBAL_USER.organization.id);
+        })
+        .catch(err => showToast(err.message, "error"));
+}
+
+function openProkerDetailModal(prokerId) {
+    // 1. Ambil data proker spesifik (menggunakan data dari GLOBAL_USER.organization.prokers jika tersedia atau fetch baru)
+    fetch(`/api/proker/${prokerId}`)
+        .then(res => res.json())
+        .then(p => {
+            const isPIC = p.pic && p.pic.id == GLOBAL_USER.id;
+            const canReport = isPIC && p.status === 'ON_GOING';
+            console.log("DEBUG PROKER:", {
+                "Status Proker": p.status,
+                "ID PIC": p.pic ? p.pic.id : 'Kosong',
+                "ID Anda": GLOBAL_USER.id,
+                "Bisa Input Laporan?": canReport
+            });
+
+            const start = formatIndoDate(p.startDate);
+            const end = formatIndoDate(p.endDate);
+
+            const modalHtml = `
+                <div id="prokerDetailModal" class="modal-overlay">
+                    <div class="modal-content proker-detail-view">
+                        <div class="modal-header">
+                            <h3>${p.title}</h3>
+                            <span class="badge status-${p.status.toLowerCase()}">${p.status}</span>
+                        </div>
+                        <hr>
+                        <div class="proker-info-body">
+                            <p><b>Deskripsi:</b><br>${p.description || '-'}</p>
+                            <div class="grid-2-col">
+                                <p><b>📅 Pelaksanaan:</b><br>${start} s/d ${end}</p>
+                                <p><b>💰 Anggaran:</b><br>Rp ${p.totalAnggaran ? p.totalAnggaran.toLocaleString() : '0'}</p>
+                            </div>
+                            <p><b>📍 PIC:</b> 
+                                <b class="member-link-text" 
+                                onclick="viewMemberProfile(${p.pic ? p.pic.id : 0}, 'proker')">
+                                ${p.pic ? p.pic.name : 'N/A'}
+                                </b>
+                            </p>
+                            ${p.rincianAnggaran ? `<p><b>📝 Rincian Anggaran:</b><br>${p.rincianAnggaran}</p>` : ''}
+                            
+                            <div class="report-section">
+                                <h4>📝 Laporan Pelaksanaan</h4>
+                                    ${canReport ? `
+                                        <textarea id="prokerReportInput" rows="5" placeholder="Tuliskan hasil kegiatan...">${p.executionReport || ''}</textarea>
+                                        
+                                        <div style="margin-top: 15px;">
+                                            <label style="display:block; margin-bottom:5px; font-weight:bold;">🔗 Link Lampiran (Dokumentasi/Drive):</label>
+                                            <input type="url" id="prokerLinkInput" 
+                                                value="${p.evidenceLink || ''}" 
+                                                placeholder="Contoh: https://drive.google.com/..." 
+                                                style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;">
+                                            <small style="color: #666;">*Pastikan link sudah di-set 'Public' agar Pimpinan bisa melihat.</small>
+                                        </div>
+
+                                        <button onclick="submitProkerReport(${p.id})" class="btn-success" style="margin-top:15px; width:100%; padding: 12px;">
+                                            Simpan Laporan & Selesaikan
+                                        </button>
+                                    ` : `
+                                        <div class="report-box-static" style="border-left: 4px solid #28a745; padding: 10px; background: #f9f9f9;">
+                                            <p><b>Hasil Kegiatan:</b><br>${p.executionReport || '<i>Belum ada laporan hasil.</i>'}</p>
+                                            
+                                            ${p.evidenceLink && p.evidenceLink !== "" ? `
+                                                <div style="margin-top: 15px; padding: 10px; background: #e6fffa; border-radius: 5px; border: 1px solid #b2f5ea;">
+                                                    <p style="margin:0;">🔗 <b>Dokumentasi Lampiran:</b></p>
+                                                    <a href="${p.evidenceLink}" target="_blank" style="color: #2c7a7b; font-weight: bold; word-break: break-all;">
+                                                        ${p.evidenceLink}
+                                                    </a>
+                                                </div>
+                                            ` : `
+                                                <p style="margin-top:10px; color: #a0aec0; font-size: 0.8rem;"><i>(Tidak ada lampiran link dokumentasi)</i></p>
+                                            `}
+                                        </div>
+                                    `}
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" onclick="document.getElementById('prokerDetailModal').remove()" class="btn-secondary">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = document.getElementById('prokerDetailModal');
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+        })
+        .catch(err => showToast("Gagal memuat detail: " + err.message, "error"));
+}
+
+function submitProkerReport(prokerId) {
+    const report = document.getElementById('prokerReportInput').value;
+    const link = document.getElementById('prokerLinkInput').value; // Ambil nilai link
+
+    if (!report.trim()) {
+        showToast("Laporan hasil tidak boleh kosong!", "error");
+        return;
+    }
+
+    const userId = GLOBAL_USER.id;
+    fetch(`/api/proker/${prokerId}/finish?userId=${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            executionReport: report,
+            evidenceLink: link // Kirim link ke backend
+        })
+    })
+        .then(async res => {
+            if (!res.ok) throw new Error(await res.text());
+            showToast("Laporan disimpan dan proker selesai!", "success");
+            document.getElementById('prokerDetailModal').remove();
+            fetchProker(GLOBAL_USER.organization.id);
+        })
+        .catch(err => showToast(err.message, "error"));
+}
+
+// --- Navigation System ---
+function navigateTo(section, callback, event) {
+    if (event) event.preventDefault();
+
+    // Mengubah URL tanpa reload, misal: /dashboard menjadi /dashboard#profile
+    history.pushState({ section: section }, "", `/struktura#${section}`);
+
+    if (callback) callback();
+}
+
+// Fungsi kembali cerdas
+function goBackFromProfile() {
+    // 🛑 LOGIKA DINAMIS BERDASARKAN LAST_PAGE_BEFORE_PROFILE
+    if (LAST_PAGE_BEFORE_PROFILE === 'kelola') {
+        loadPimpinanDashboard(GLOBAL_USER);
+    } else if (LAST_PAGE_BEFORE_PROFILE === 'org-detail') {
+        // Jika dari profil organisasi, ambil ID organisasi yang sedang aktif
+        const orgId = (GLOBAL_USER.organization) ? GLOBAL_USER.organization.id : null;
+        if (orgId) {
+            loadOrganizationProfile(orgId);
+        } else {
+            loadDefaultLanding(null, GLOBAL_USER);
+        }
+    } else if (LAST_PAGE_BEFORE_PROFILE === 'proker') {
+        loadProkerPage(null);
+    } else if (LAST_PAGE_BEFORE_PROFILE === 'orgList' || LAST_PAGE_BEFORE_PROFILE === 'org-list') {
+        loadOrgListPage(null, GLOBAL_USER);
+    } else {
+        // Default kembali ke Dashboard Utama
+        loadDefaultLanding(null, GLOBAL_USER);
+    }
+}
+
+function loadNotificationPage() {
+    updatePageTitle("Pemberitahuan");
+    if (window.location.hash !== '#notifications') {
+        history.pushState({ section: 'notifications' }, "Pemberitahuan", "#notifications");
+    }
+
+    // 1. Tandai semua sudah dibaca di server
+    fetch(`/api/notifications/user/${GLOBAL_USER.id}/read-all`, { method: 'PUT' })
+        .then(() => {
+            const badge = document.getElementById('notifBadge');
+            if (badge) {
+                badge.style.display = 'none';
+                badge.textContent = '0';
+            }
+        });
+
+    const container = document.getElementById('main-content-area');
+    container.innerHTML = `<h3>Pemberitahuan</h3><hr><div id="notifList">Memuat...</div>`;
+
+    fetch(`/api/notifications/user/${GLOBAL_USER.id}`)
+        .then(res => res.json())
+        .then(notifications => {
+            const list = document.getElementById('notifList');
+            if (!Array.isArray(notifications) || notifications.length === 0) {
+                list.innerHTML = '<p class="text-muted">Tidak ada pemberitahuan.</p>';
+                return;
+            }
+
+            list.innerHTML = notifications.map(n => {
+                let displayMessage = n.message;
+                let clickAction = '';
+                let borderStyle = 'border-left: 4px solid #eee;';
+
+                // 1. Notifikasi Status Proker (Untuk PIC & Pengaju)
+                if (n.message.startsWith("PROKER_STATUS:")) {
+                    const msgOnly = n.message.split(":")[1];
+                    displayMessage = `<b>Update Proker:</b> ${msgOnly}`;
+                    // Membawa Pengaju ke halaman program kerja untuk melihat status terbarunya
+                    clickAction = `onclick="navigateTo('proker', () => loadProkerPage())"`;
+                    borderStyle = 'border-left: 4px solid #ecc94b; cursor: pointer;'; // Kuning untuk info status
+                }
+
+                // 2. Notifikasi Pimpinan: Proker Selesai (Bisa diklik)
+                else if (n.message.startsWith("PROKER_FINISH:")) {
+                    const parts = n.message.split(":");
+                    displayMessage = `<b>Laporan Proker:</b> ${parts[2]} <br><small style="color:blue;">(Klik untuk lihat laporan hasil)</small>`;
+                    clickAction = `onclick="navigateTo('proker', () => { loadProkerPage(); setTimeout(() => openProkerDetailModal(${parts[1]}), 500); })"`;
+                    borderStyle = 'border-left: 4px solid #2d3748; cursor: pointer;'; // Abu gelap untuk selesai
+                }
+                // Deteksi Tipe Notifikasi untuk Warna Garis Samping
+                else if (n.message.startsWith("NEW_MEMBER_REQUEST:")) {
+                    displayMessage = `<b>Permintaan Keanggotaan:</b> ${n.message.split(":")[1]} <br><small style="color:blue;">(Klik untuk proses)</small>`;
+                    clickAction = `onclick="navigateTo('kelola', () => loadPimpinanDashboard(GLOBAL_USER))"`;
+                    borderStyle = 'border-left: 4px solid #4299e1; cursor: pointer;'; // Biru
+                }
+                else if (n.message.startsWith("PROKER_NEW:")) {
+                    const parts = n.message.split(":");
+                    displayMessage = `<b>Pengajuan Proker Baru:</b> ${parts[2]} <br><small style="color:blue;">(Klik untuk lihat detail)</small>`;
+                    clickAction = `onclick="navigateTo('proker', () => { loadProkerPage(); setTimeout(() => openProkerDetailModal(${parts[1]}), 500); })"`;
+                    borderStyle = 'border-left: 4px solid #48bb78; cursor: pointer;'; // Hijau
+                }
+                else if (n.message.includes("PROKER_APPROVED") || n.message.includes("PROKER_REJECTED")) {
+                    clickAction = `onclick="navigateTo('proker', () => loadProkerPage())"`;
+                    borderStyle = 'border-left: 4px solid #ecc94b; cursor: pointer;'; // Kuning
+                }
+                else if (n.message.startsWith("NEW_RESIGN_REQUEST:")) {
+                    displayMessage = `<b>Permintaan Keluar:</b> ${n.message.split(":")[1]} <br><small style="color:red;">(Segera proses di Kelola Anggota)</small>`;
+                    // Klik notif langsung ke halaman Kelola Anggota
+                    clickAction = `onclick="navigateTo('kelola', () => loadPimpinanDashboard(GLOBAL_USER))"`;
+                    borderStyle = 'border-left: 4px solid #e53e3e; cursor: pointer;'; // Merah untuk resign
+                }
+
+                return `
+                    <div class="card-section notif-item-card ${n.isRead ? '' : 'unread'}" ${clickAction} 
+                        style="margin-bottom:12px; padding:15px; border-radius:10px; ${borderStyle} 
+                                background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.3s ease;">
+                        <p style="margin:0; font-size: 0.95rem; color: #333;">${displayMessage}</p>
+                        <small style="color: #888;">${formatIndoDate(n.createdAt)}</small>
+                    </div>
+                `;
+            }).join('');
+        })
+        .catch(err => console.error("Gagal memuat notifikasi", err));
+}
+
+function fetchUnreadNotifCount() {
+    fetch(`/api/notifications/user/${GLOBAL_USER.id}/unread-count`)
+        .then(res => res.json())
+        .then(count => {
+            const badge = document.getElementById('notifBadge');
+            if (badge && count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'inline-block';
+            }
+        });
+}
+
+let CACHED_PROKERS = []; // Tempat menyimpan data proker agar bisa di-sort tanpa fetch ulang
+
+function sortProkerList(criteria) {
+    if (!CACHED_PROKERS || CACHED_PROKERS.length === 0) return;
+
+    // Logika pengurutan
+    if (criteria === 'latest') {
+        CACHED_PROKERS.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+    } else if (criteria === 'oldest') {
+        CACHED_PROKERS.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    } else if (criteria === 'budget') {
+        CACHED_PROKERS.sort((a, b) => (b.totalAnggaran || 0) - (a.totalAnggaran || 0));
+    }
+
+    // Panggil fungsi render ulang (kita akan buat fungsi ini di bawah)
+    renderProkerList(CACHED_PROKERS);
+}
+function loadProkerPage(event) {
+    if (event) event.preventDefault();
+    updatePageTitle("Program Kerja");
+    const container = document.getElementById('main-content-area');
+    const orgId = GLOBAL_USER.organization ? GLOBAL_USER.organization.id : null;
+
+    if (!orgId) {
+        container.innerHTML = "<h3>Anda belum terdaftar di organisasi.</h3>";
+        return;
+    }
+
+    // 🛑 PERBAIKAN: Ambil data anggota dulu agar bidangOptions tidak kosong
+    fetch(`/api/users/organization/${orgId}/active`)
+        .then(res => res.json())
+        .then(members => {
+            CURRENT_ORG_MEMBERS = members; // Simpan data ke cache global
+
+            const userPos = (GLOBAL_USER.position || "").toLowerCase();
+            const canAdd = GLOBAL_USER.role === 'PIMPINAN' || userPos.includes("ketua") || userPos.includes("koordinator") || userPos.includes("kepala") || userPos.includes("kabid");
+
+            // 🛑 Logika filter bidang Anda
+            const bidangOptions = Array.from(new Set(
+                CURRENT_ORG_MEMBERS.map(m => extractBidangFromPosition(m.position))
+            )).map(b => `<option value="${b}">${b}</option>`).join('');
+
+            // Gunakan template innerHTML milik Anda
+            container.innerHTML = `
+                <div class="header-with-action">
+                    <h3>Program Kerja</h3>
+                    ${canAdd ? `<button onclick="openAddProkerModal()" class="btn-success">+ Tambah Proker</button>` : ''}
+                </div>
+                
+                <div class="stats-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px;">
+                    <div class="stat-card">Total: <b id="statTotal">0</b></div>
+                    <div class="stat-card" style="border-left: 4px solid #ecc94b;">Menunggu: <b id="statPending">0</b></div>
+                    <div class="stat-card" style="border-left: 4px solid #3182ce;">Direncanakan: <b id="statPlanned">0</b></div>
+                    <div class="stat-card" style="border-left: 4px solid #38a169;">Berlangsung: <b id="statOngoing">0</b></div>
+                    <div class="stat-card" style="border-left: 4px solid #2d3748;">Selesai: <b id="statCompleted">0</b></div>
+                    <div class="stat-card" style="border-left: 4px solid #e53e3e;">Ditolak: <b id="statRejected">0</b></div>
+                </div>
+
+                <div class="proker-toolbar" style="background:#f4f7f6; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="display:flex; gap:10px; margin-bottom:15px;">
+                        <input type="text" id="prokerSearch" placeholder="Cari Judul, PIC, Deskripsi, Anggaran, atau Tanggal..." 
+                            style="flex:1; padding:12px; border-radius:8px; border:1px solid #ccc;" 
+                            oninput="searchAndSortProker()">
+                        <button onclick="searchAndSortProker()" class="btn-primary" style="width:120px;">🔍 Cari</button>
+                    </div>
+                    
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+                        <select id="sortAlpha" onchange="searchAndSortProker()" style="padding:10px; border-radius:8px;">
+                            <option value="">Urutkan Abjad...</option>
+                            <option value="asc">Judul (A - Z)</option>
+                            <option value="desc">Judul (Z - A)</option>
+                        </select>
+                        <select id="sortTime" onchange="searchAndSortProker()" style="padding:10px; border-radius:8px;">
+                            <option value="">Urutkan Waktu...</option>
+                            <option value="newest">Paling Baru Dibuat</option>
+                            <option value="oldest">Paling Lama Dibuat</option>
+                        </select>
+                        <select id="sortBudget" onchange="searchAndSortProker()" style="padding:10px; border-radius:8px;">
+                            <option value="">Urutkan Anggaran...</option>
+                            <option value="highest">Anggaran Terbesar</option>
+                            <option value="lowest">Anggaran Terkecil</option>
+                        </select>
+                        <select id="sortStatus" onchange="searchAndSortProker()" style="padding:10px; border-radius:8px;">
+                            <option value="">Urutkan Kategori Status...</option>
+                            <option value="PENDING">Menunggu Persetujuan</option>
+                            <option value="PLANNED">Direncanakan</option>
+                            <option value="ON_GOING">Berlangsung</option>
+                            <option value="COMPLETED">Selesai</option>
+                            <option value="REJECTED">Ditolak</option>
+                        </select>
+                        <select id="sortBidang" onchange="searchAndSortProker()" style="padding:10px; border-radius:8px;">
+                            <option value="">Semua Bidang...</option>
+                            ${bidangOptions}
+                        </select>
+                    </div>
+                </div>
+
+                <div id="prokerList" class="proker-grid">Memuat data...</div>
+            `;
+
+            // Setelah UI siap, panggil fungsi fetch proker milik Anda
+            fetchProker(orgId);
+        })
+        .catch(err => console.error("Gagal memuat filter bidang:", err));
+}
+
+function fetchProker(orgId) {
+    fetch(`/api/proker/org/${orgId}`)
+        .then(res => res.json())
+        .then(prokers => {
+            CACHED_PROKERS = prokers; // Simpan ke memori
+            searchAndSortProker(); // Tampilkan data awal
+        })
+        .catch(err => console.error("Gagal ambil proker:", err));
+}
+
+function searchAndSortProker() {
+    const keyword = document.getElementById('prokerSearch').value.toLowerCase();
+    const alpha = document.getElementById('sortAlpha').value;
+    const time = document.getElementById('sortTime').value;
+    const budget = document.getElementById('sortBudget').value;
+    const status = document.getElementById('sortStatus').value;
+    const bidangFilter = document.getElementById('sortBidang').value;
+
+    // 1. FILTERING Detail
+    let result = CACHED_PROKERS.filter(p => {
+        const picName = p.pic ? p.pic.name.toLowerCase() : "";
+        const anggaran = p.totalAnggaran ? p.totalAnggaran.toString() : "0";
+        const desc = p.description ? p.description.toLowerCase() : "";
+        const tgl = formatIndoDate(p.startDate).toLowerCase();
+        const picPos = p.pic ? p.pic.position : "";
+        const picBidang = extractBidangFromPosition(picPos);
+
+        const matchSearch = p.title.toLowerCase().includes(keyword) || picName.includes(keyword) ||
+            desc.includes(keyword) || anggaran.includes(keyword) || tgl.includes(keyword);
+
+        const matchStatus = status === "" || p.status === status;
+        const matchBidang = bidangFilter === "" || picBidang === bidangFilter;
+        return matchSearch && matchStatus && matchBidang;
+    });
+
+    // 2. SORTING Berjenjang
+    if (budget === 'highest') result.sort((a, b) => (b.totalAnggaran || 0) - (a.totalAnggaran || 0));
+    else if (budget === 'lowest') result.sort((a, b) => (a.totalAnggaran || 0) - (b.totalAnggaran || 0));
+
+    if (time === 'newest') result.sort((a, b) => b.id - a.id); // ID besar = paling baru
+    else if (time === 'oldest') result.sort((a, b) => a.id - b.id);
+
+    if (alpha === 'asc') result.sort((a, b) => a.title.localeCompare(b.title));
+    else if (alpha === 'desc') result.sort((a, b) => b.title.localeCompare(a.title));
+
+    renderProkerList(result);
+}
+
+function filterAndSortOrgMembers() {
+    const keyword = document.getElementById('memberSearch').value.toLowerCase();
+    const sortVal = document.getElementById('memberSort').value;
+    const tableContainer = document.getElementById('orgMemberTableContainer');
+
+    // 1. FILTERING
+    let result = CURRENT_ORG_MEMBERS.filter(m => {
+        const noAnggota = m.memberNumber || "";
+        return m.name.toLowerCase().includes(keyword) || noAnggota.toLowerCase().includes(keyword);
+    });
+
+    // 2. SORTING cerdas
+    if (sortVal === 'name-asc') {
+        result.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    else if (sortVal === 'name-desc') {
+        result.sort((a, b) => b.name.localeCompare(a.name));
+    }
+    else if (sortVal === 'no-anggota') {
+        // 🛑 LOGIKA: Taruh yang kosong di paling bawah
+        result.sort((a, b) => {
+            const noA = a.memberNumber;
+            const noB = b.memberNumber;
+
+            if (!noA && noB) return 1;  // a kosong, b isi -> a turun
+            if (noA && !noB) return -1; // a isi, b kosong -> a naik
+            if (!noA && !noB) return 0; // keduanya kosong
+
+            return noA.localeCompare(noB, undefined, { numeric: true }); // Urutan angka normal
+        });
+    }
+    else if (sortVal === 'rank') {
+        // Skala Prioritas Jabatan
+        const getRank = (pos) => {
+            const p = (pos || "").toLowerCase();
+            if (p.includes("ketua") || p.includes("pimpinan")) return 1;
+            if (p.includes("koordinator") || p.includes("kabid") || p.includes("kepala")) return 2;
+            if (p.includes("sekretaris") || p.includes("bendahara")) return 3;
+            return 4; // Anggota Biasa
+        };
+        result.sort((a, b) => getRank(a.position) - getRank(b.position));
+    }
+
+    // 3. RENDER TABLE
+    tableContainer.innerHTML = `
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>No. Anggota</th>
+                    <th>Nama</th>
+                    <th>Jabatan</th>
+                    <th>Jenis Kelamin</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${result.map(m => `
+                    <tr>
+                        <td>${m.memberNumber || '-'}</td>
+                        <td><a href="#" onclick="viewMemberProfile(${m.id}, 'org-detail'); return false;">${m.name}</a></td>
+                        <td>${m.position || 'Anggota'}</td>
+                        <td>${m.gender === 'MALE' ? 'Laki-laki' : m.gender === 'FEMALE' ? 'Perempuan' : '-'}</td>
+                        <td><span class="badge status-active">ACTIVE</span></td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function renderProkerList(prokers) {
+    const listContainer = document.getElementById('prokerList');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+    const stats = { TOTAL: prokers.length, PENDING: 0, PLANNED: 0, ON_GOING: 0, COMPLETED: 0, REJECTED: 0 };
+    let htmlCards = '';
+
+    if (prokers.length === 0) {
+        listContainer.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 40px; color: #666;"><h4>🔍 Tidak ada proker yang cocok.</h4></div>';
+        updateProkerStats(stats);
+        return;
+    }
+
+    prokers.forEach(p => {
+        if (stats[p.status] !== undefined) stats[p.status]++;
+
+        const statusClass = `status-${p.status.toLowerCase()}`;
+        const isPIC = p.pic && p.pic.id == GLOBAL_USER.id;
+        const isPimpinan = GLOBAL_USER.role === 'PIMPINAN';
+
+        let deleteAction = '';
+        if (isPimpinan && p.status !== 'COMPLETED' && p.status !== 'ON_GOING') {
+            deleteAction = `
+            <button onclick="confirmDeleteProker(${p.id}, '${p.title.replace(/'/g, "\\'")}')" 
+                    class="btn-link-danger" style="margin-left: auto; color: #e53e3e; cursor: pointer;" title="Hapus Proker">
+                🗑️ Hapus
+            </button>`;
+        }
+
+        // Tombol Aksi Anggota/PIC
+        let progressAction = '';
+        if (isPIC || isPimpinan) {
+            if (p.status === 'PLANNED') progressAction = `<button onclick="updateStatus(${p.id}, 'ON_GOING')" class="btn-primary btn-small">Mulai</button>`;
+            else if (p.status === 'ON_GOING') progressAction = `<button onclick="openProkerDetailModal(${p.id})" class="btn-success btn-small">Selesaikan</button>`;
+        }
+
+        // Tombol Persetujuan Pimpinan
+        let pimpinanApproval = '';
+        if (isPimpinan && p.status === 'PENDING') {
+            pimpinanApproval = `
+                <div style="margin-top:10px; display:flex; gap:5px;">
+                    <button onclick="approveProker(${p.id})" class="btn-success btn-small">Terima</button>
+                    <button onclick="openRejectProkerModal(${p.id})" class="btn-danger btn-small">Tolak</button>
+                </div>`;
+        }
+
+        htmlCards += `
+            <div class="proker-card ${statusClass}" onclick="openProkerDetailModal(${p.id})" style="cursor:pointer;">
+                <div class="proker-header">
+                    <h4>${p.title}</h4>
+                    <span class="badge ${statusClass}">${p.status}</span>
+                    </div>
+                    <p class="proker-desc">${p.description ? p.description.substring(0, 80) + '...' : '-'}</p>
+                    <p class="anggaran-text">💰 Rp ${p.totalAnggaran ? p.totalAnggaran.toLocaleString() : '0'}</p>
+                    <div class="proker-footer">
+                        <span>PIC: 
+                            <b class="member-link-text" 
+                            onclick="event.stopPropagation(); viewMemberProfile(${p.pic ? p.pic.id : 0}, 'proker')">
+                            ${p.pic ? p.pic.name : 'N/A'}
+                            </b>
+                        </span>
+                    </div>
+                    <hr style="margin: 5px 0;">
+                    <small>${formatIndoDate(p.startDate)} s/d ${formatIndoDate(p.endDate)}</small>
+                <div class="proker-actions" onclick="event.stopPropagation()">
+                    ${progressAction} ${pimpinanApproval}
+                    ${deleteAction}
+                </div>
+            </div>
+        `;
+    });
+
+    listContainer.innerHTML = htmlCards;
+    updateProkerStats(stats);
+}
+
+function openRejectProkerModal(prokerId) {
+    const modalHtml = `
+        <div id="rejectProkerModal" class="confirm-overlay">
+            <div class="confirm-box" style="width: 450px;">
+                <h4 style="color: #d9534f;">Tolak Program Kerja</h4>
+                <p>Berikan alasan penolakan atau poin revisi untuk PIC:</p>
+                <textarea id="prokerRejectReason" rows="4" 
+                    style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin: 15px 0;"
+                    placeholder="Contoh: Anggaran terlalu besar, PIC harap diganti..."></textarea>
+                <div class="confirm-buttons">
+                    <button onclick="submitRejectProker(${prokerId})" class="btn-danger">Konfirmasi Tolak</button>
+                    <button onclick="document.getElementById('rejectProkerModal').remove()" class="btn-secondary">Batal</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function submitRejectProker(prokerId) {
+    const reason = document.getElementById('prokerRejectReason').value;
+    if (!reason.trim()) {
+        showToast("Alasan wajib diisi agar PIC bisa mengevaluasi!", "error");
+        return;
+    }
+
+    const pimpinanId = GLOBAL_USER.id;
+    fetch(`/api/proker/${prokerId}/reject?pimpinanId=${pimpinanId}&reason=${encodeURIComponent(reason)}`, {
+        method: 'PUT'
+    })
+        .then(async res => {
+            if (!res.ok) throw new Error(await res.text());
+            showToast("Proker ditolak dengan alasan.", "success");
+            document.getElementById('rejectProkerModal').remove();
+            fetchProker(GLOBAL_USER.organization.id);
+        })
+        .catch(err => showToast(err.message, "error"));
+}
+
+// Fungsi baru untuk konfirmasi hapus
+function confirmDeleteProker(prokerId, title) {
+    customConfirm(`⚠️ PERINGATAN: Menghapus proker "${title}" akan menghapus seluruh data terkait secara permanen. Apakah anda yakin ingin menghapus?`, () => {
+        const pimpinanId = GLOBAL_USER.id;
+
+        fetch(`/api/proker/${prokerId}?pimpinanId=${pimpinanId}`, {
+            method: 'DELETE'
+        })
+            .then(async res => {
+                if (!res.ok) throw new Error(await res.text());
+                showToast("Program Kerja berhasil dihapus.", "success");
+                fetchProker(GLOBAL_USER.organization.id); // Refresh daftar
+            })
+            .catch(err => showToast("Gagal menghapus: " + err.message, "error"));
+    });
+}
+
+function loadResignRequests(orgId) {
+    // 🛑 GUNAKAN endpoint general (tanpa /active) agar status RESIGN_REQUESTED ikut terbawa
+    fetch(`/api/users/organization/${orgId}`) 
+        .then(res => res.json())
+        .then(members => {
+            const tableBody = document.querySelector("#resignRequestTable tbody");
+            
+            // 🛑 Ambil data user yang statusnya RESIGN_REQUESTED
+            const requests = members.filter(m => m.memberStatus === 'RESIGN_REQUESTED');
+
+            tableBody.innerHTML = '';
+            if (requests.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="3" class="text-muted">Tidak ada permintaan keluar.</td></tr>`;
+                return;
+            }
+
+            requests.forEach(u => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td>
+                            <b style="color: #2d3748;">${u.name}</b><br>
+                            <small class="text-muted">${u.position || 'Anggota'}</small>
+                        </td>
+                        <td><i>"${u.applicationReason || 'Tidak ada alasan'}"</i></td>
+                        <td>
+                            <div style="display:flex; gap:5px;">
+                                <button onclick="processResign(${u.id}, 'APPROVE')" class="btn-danger btn-small">Setujui</button>
+                                <button onclick="processResign(${u.id}, 'REJECT')" class="btn-secondary btn-small">Tolak</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        })
+        .catch(err => console.error("Gagal memuat permintaan resign:", err));
+}
+
+// 🛑 Fungsi Aksi Tombol (Pastikan ini ada di dashboard.js)
+function processResign(targetUserId, action) {
+    const approverId = GLOBAL_USER.id;
+    const actionText = action === 'APPROVE' ? "MENYETUJUI" : "MENOLAK";
+
+    customConfirm(`Apakah Anda yakin ingin ${actionText} pengunduran diri ini?`, () => {
+        // Kita gunakan method PUT ke endpoint yang akan kita buat di UserController
+        fetch(`/api/users/${approverId}/process-resign/${targetUserId}?action=${action}`, {
+            method: 'PUT'
+        })
+        .then(async res => {
+            if (res.ok) {
+                showToast(`Permintaan berhasil di-${action === 'APPROVE' ? 'setujui' : 'tolak'}`, "success");
+                loadPimpinanDashboard(GLOBAL_USER); // Refresh data
+            } else {
+                const errorText = await res.text();
+                showToast("Gagal memproses: " + errorText, "error");
+            }
+        })
+        .catch(err => console.error("Error process resign:", err));
+    });
+}
+
+function confirmDeleteAccount() {
+    customConfirm("⚠️ PERINGATAN: Menghapus akun akan menghilangkan seluruh data Anda secara permanen. Lanjutkan?", () => {
+        fetch(`/api/users/${GLOBAL_USER.id}`, { 
+            method: 'DELETE' // 🛑 Ini akan cocok dengan @DeleteMapping di Java
+        })
+        .then(async res => {
+            if (res.ok) {
+                showToast("Akun berhasil dihapus. Sampai jumpa!", "success");
+                setTimeout(() => logout(), 2000); 
+            } else {
+                const errorMsg = await res.text();
+                showToast("Gagal: " + errorMsg, "error");
+            }
+        })
+        .catch(err => {
+            console.error("Delete error:", err);
+            showToast("Terjadi kesalahan koneksi ke server.", "error");
+        });
+    });
+}
+
+function openResignModal() {
+    const modalHtml = `
+        <div id="resignModal" class="confirm-overlay">
+            <div class="confirm-box" style="width: 450px;">
+                <h4 style="color: #d9534f;">Pengajuan Pengunduran Diri</h4>
+                <p>Berikan alasan Anda mengundurkan diri dari <b>${GLOBAL_USER.organization.name}</b>:</p>
+                <textarea id="resignReasonInput" rows="4" 
+                    style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin: 15px 0;"
+                    placeholder="Contoh: Fokus studi, pindah domisili, dll..."></textarea>
+                <div class="confirm-buttons">
+                    <button onclick="submitResignation()" class="btn-danger">Kirim Pengajuan</button>
+                    <button onclick="document.getElementById('resignModal').remove()" class="btn-secondary">Batal</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function submitResignation() {
+    const reason = document.getElementById('resignReasonInput').value;
+    if (!reason.trim()) {
+        showToast("Alasan wajib diisi!", "error");
+        return;
+    }
+
+    // Mengirim permintaan ke backend
+    fetch(`/api/users/${GLOBAL_USER.id}/request-resign?reason=${encodeURIComponent(reason)}`, { method: 'POST' })
+        .then(res => {
+            if (res.ok) {
+                showToast("Pengajuan terkirim. Menunggu persetujuan pimpinan.", "success");
+                document.getElementById('resignModal').remove();
+                location.reload(); // Refresh untuk update status UI
+            }
+        })
+        .catch(err => showToast(err.message, "error"));
+}
+
+function extractBidangFromPosition(position) {
+    if (!position || position === "Anggota") return "Umum";
+    const p = position.toLowerCase();
+
+    // Cari kata kunci pemisah (Divisi, Bidang, atau Bagian)
+    const keywords = ["divisi ", "bidang ", "bagian "];
+    for (let kw of keywords) {
+        if (p.includes(kw)) {
+            // Mengambil kata setelah "divisi/bidang/bagian"
+            const parts = position.split(new RegExp(kw, "i"));
+            return parts[1] ? parts[1].trim() : "Umum";
+        }
+    }
+    return "Umum"; // Jika jabatan seperti "Ketua" tanpa nama bidang
+}
+
+// Fungsi untuk merubah Page Title secara dinamis
+function updatePageTitle(pageName) {
+    const baseTitle = "Struktura";
+    document.title = `${pageName} | ${baseTitle}`;
+}
+
+window.onpopstate = function (event) {
+    // Pastikan user masih login sebelum memuat konten
+    if (!localStorage.getItem("CURRENT_USER_ID")) {
+        window.location.replace("/login");
+        return;
+    }
+
+    const section = (event.state && event.state.section) ? event.state.section : 'dashboard';
+
+    // Aksi berdasarkan riwayat
+    if (section === 'kelola-org') loadEditOrganizationPage();
+    else if (section === 'orgList') loadOrgListPage(null, GLOBAL_USER);
+    else if (section === 'notifications') loadNotificationPage();
+    else if (section === 'proker') loadProkerPage(null);
+    else if (section === 'kelola') loadPimpinanDashboard(GLOBAL_USER);
+    else if (section === 'profile') loadProfilePage(null);
+    else loadDefaultLanding(null, GLOBAL_USER);
+};
+
+// Cek notifikasi setiap 30 detik secara otomatis
+setInterval(() => {
+    if (GLOBAL_USER && GLOBAL_USER.id) {
+        fetchUnreadNotifCount();
+    }
+}, 30000);

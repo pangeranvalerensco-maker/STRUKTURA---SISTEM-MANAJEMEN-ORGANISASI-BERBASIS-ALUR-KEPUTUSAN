@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <title>Dashboard Struktura</title>
@@ -8,13 +9,17 @@
     <link rel="stylesheet" th:href="@{/css/header-nav.css}">
     <link rel="stylesheet" th:href="@{/css/main-layout.css}">
 </head>
-<body>
-<div th:replace="fragments/header :: public-header-dynamic"></div>
 
-<div class="container">
+<body>
+    <div th:replace="fragments/header :: public-header-dynamic"></div>
+
+    <div class="container">
     </div>
 
-<script th:src="@{/js/dashboard.js}"></script>
+    <div id="toastContainer" class="toast-container"></div>
+
     <script th:src="@{/js/auth-init.js}"></script>
+    <script th:src="@{/js/dashboard.js}"></script>
 </body>
+
 </html>
