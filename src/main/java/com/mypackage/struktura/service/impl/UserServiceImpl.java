@@ -391,8 +391,8 @@ public class UserServiceImpl implements UserService {
 
         // 4. Update Jabatan
         targetUser.setPosition(newPosition);
-
-        return userRepository.save(targetUser);
+        userRepository.save(targetUser);
+        return userRepository.findById(targetUserId).orElseThrow(); // Ambil ulang data utuh
     }
 
     // 🛑 METHOD BARU: Menetapkan Nomor Anggota
@@ -421,8 +421,9 @@ public class UserServiceImpl implements UserService {
         // 4. Update Nomor Anggota
         // 🛑 Opsional: Cek duplikasi memberNumber jika diperlukan
         targetUser.setMemberNumber(memberNumber);
+        userRepository.save(targetUser);
+        return userRepository.findById(targetUserId).orElseThrow(); // Ambil ulang data utuh
 
-        return userRepository.save(targetUser);
     }
 
     @Override

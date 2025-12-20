@@ -10,10 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Sort;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
