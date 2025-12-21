@@ -1,0 +1,84 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Struktura System Flow">
+    <mxGraphModel dx="1420" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- START -->
+        <mxCell id="start" value="START\nDOMContentLoaded" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- CHECK SESSION -->
+        <mxCell id="checkSession" value="Check localStorage\nCURRENT_USER_ID" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="260" y="40" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- GUEST -->
+        <mxCell id="guest" value="Mode GUEST\nLoad Organization List" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="520" y="10" width="220" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- FETCH USER -->
+        <mxCell id="fetchUser" value="Fetch User Profile\n/api/users/{id}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="520" y="100" width="220" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- SIDEBAR -->
+        <mxCell id="sidebar" value="Render Sidebar\nBased on Role & Status" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="780" y="100" width="240" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- ROUTER -->
+        <mxCell id="router" value="Hash Router\nrenderSectionByHash()" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="100" width="220" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- JOIN FLOW -->
+        <mxCell id="join" value="Join Organization\nStatus → PENDING" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;" vertex="1" parent="1">
+          <mxGeometry x="260" y="200" width="240" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- APPROVE -->
+        <mxCell id="approve" value="Approve / Reject\nPimpinan Decision" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="520" y="200" width="220" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- ACTIVE -->
+        <mxCell id="active" value="Status ACTIVE\nJoin Date Recorded" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="780" y="200" width="240" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- PROKER -->
+        <mxCell id="proker" value="Proker Lifecycle\nCreate → Approve → Execute → Complete" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;" vertex="1" parent="1">
+          <mxGeometry x="260" y="320" width="400" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- MANAGEMENT -->
+        <mxCell id="manage" value="Leadership Management\nHandover / Revoke / Admin Control" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;" vertex="1" parent="1">
+          <mxGeometry x="780" y="320" width="360" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- END -->
+        <mxCell id="end" value="END\nUser Logout / Session Expired" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="520" y="460" width="260" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- EDGES -->
+        <mxCell id="e1" source="start" target="checkSession" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1"/>
+        <mxCell id="e2" source="checkSession" target="guest" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1"/>
+        <mxCell id="e3" source="checkSession" target="fetchUser" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1"/>
+        <mxCell id="e4" source="fetchUser" target="sidebar" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1"/>
+        <mxCell id="e5" source="sidebar" target="router" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1"/>
+        <mxCell id="e6" source="router" target="join" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1"/>
+        <mxCell id="e7" source="join" target="approve" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1"/>
+        <mxCell id="e8" source="approve" target="active" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1"/>
+        <mxCell id="e9" source="active" target="proker" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1"/>
+        <mxCell id="e10" source="proker" target="manage" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1"/>
+        <mxCell id="e11" source="manage" target="end" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1"/>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
