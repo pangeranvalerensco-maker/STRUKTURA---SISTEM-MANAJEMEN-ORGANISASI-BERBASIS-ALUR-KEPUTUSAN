@@ -1,0 +1,168 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.0.4 Chrome/138.0.7204.97 Electron/37.2.1 Safari/537.36" version="28.0.4" pages="2">
+  <diagram name="Page-1" id="T4-tor4RbW3QH6pjLru3">
+    <mxGraphModel dx="1042" dy="674" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="guavmSfNijjthyBl3r2G-1" value="&lt;b&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;Struktura - Sistem Manajemen Organisasi Berbasis Alur Keputusan&lt;br&gt;&lt;br&gt;By Pangeran Valerensco Rivaldi Hutabarat&lt;/font&gt;&lt;/b&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="255" y="50" width="340" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="pr5vIengqnVXWsjQHjPk-8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="guavmSfNijjthyBl3r2G-2" target="pr5vIengqnVXWsjQHjPk-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="guavmSfNijjthyBl3r2G-2" value="START" style="ellipse;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="365" y="150" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="pr5vIengqnVXWsjQHjPk-7" value="Cek localStorage userId" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="328" y="240" width="195" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="pr5vIengqnVXWsjQHjPk-12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="pr5vIengqnVXWsjQHjPk-9" target="pr5vIengqnVXWsjQHjPk-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pr5vIengqnVXWsjQHjPk-9" value="Ambil data dari database" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.database;whiteSpace=wrap;spacingTop=16;" vertex="1" parent="1">
+          <mxGeometry x="368.25" y="300" width="114.5" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pr5vIengqnVXWsjQHjPk-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="pr5vIengqnVXWsjQHjPk-7" target="pr5vIengqnVXWsjQHjPk-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pr5vIengqnVXWsjQHjPk-14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="pr5vIengqnVXWsjQHjPk-11" target="pr5vIengqnVXWsjQHjPk-13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pr5vIengqnVXWsjQHjPk-11" value="Tampilan Aplikasi" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;strokeWidth=2;spacingTop=0;" vertex="1" parent="1">
+          <mxGeometry x="348" y="430" width="154.5" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="pr5vIengqnVXWsjQHjPk-13" value="END" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="365" y="540" width="120" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="ondy2IP0a27qcr5Q3pw_" name="Page-2">
+    <mxGraphModel dx="1489" dy="963" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-11" value="&lt;b&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;Struktura - Sistem Manajemen Organisasi Berbasis Alur Keputusan&lt;br&gt;&lt;br&gt;By Pangeran Valerensco Rivaldi Hutabarat&lt;/font&gt;&lt;/b&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="255" y="60" width="340" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="8h4kyF_MyOdSE-Lr8EJv-13" target="8h4kyF_MyOdSE-Lr8EJv-21" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-13" value="START" style="ellipse;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="358" y="160" width="135" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="8h4kyF_MyOdSE-Lr8EJv-21" target="8h4kyF_MyOdSE-Lr8EJv-27" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-21" value="Apakah Pengguna&lt;div&gt;sudah&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;login?&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;(UserId != NULL)&lt;/span&gt;&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="339" y="260" width="172" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-26" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="8h4kyF_MyOdSE-Lr8EJv-23" target="8h4kyF_MyOdSE-Lr8EJv-25" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-23" value="Ambil Data dari tabel organizations" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.database;whiteSpace=wrap;spacingTop=12;" parent="1" vertex="1">
+          <mxGeometry x="373" y="510" width="104.5" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-31" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="8h4kyF_MyOdSE-Lr8EJv-25" target="8h4kyF_MyOdSE-Lr8EJv-30" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-25" value="Tampilkan Halaman&lt;br&gt;Daftar Organisasi lengkap dengan fitur search, sort, and filter, pagination" style="shape=parallelogram;perimeter=parallelogramPerimeter;fixedSize=1;strokeWidth=2;spacingTop=2;html=1;convertToSvg=0;whiteSpace=wrap;spacing=15;" parent="1" vertex="1">
+          <mxGeometry x="321.75" y="660" width="207" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-29" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="8h4kyF_MyOdSE-Lr8EJv-27" target="8h4kyF_MyOdSE-Lr8EJv-23" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-27" value="set Role = Guest" style="whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="365.5" y="410" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-33" value="FALSE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="8h4kyF_MyOdSE-Lr8EJv-30" target="8h4kyF_MyOdSE-Lr8EJv-32" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="8h4kyF_MyOdSE-Lr8EJv-30" target="uot6lVh3r1S2ukKb5clw-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-30" value="Pilih Menu &lt;i&gt;Login&lt;/i&gt;?" style="rhombus;whiteSpace=wrap;html=1;strokeWidth=2;spacingTop=2;spacing=15;" parent="1" vertex="1">
+          <mxGeometry x="382.88" y="780" width="84.75" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-1" value="FALSE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="8h4kyF_MyOdSE-Lr8EJv-32" target="8h4kyF_MyOdSE-Lr8EJv-34">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-32" value="Pilih Menu &lt;i&gt;Register&lt;/i&gt;?" style="rhombus;whiteSpace=wrap;html=1;strokeWidth=2;spacingTop=2;spacing=15;" parent="1" vertex="1">
+          <mxGeometry x="570" y="777.5" width="104.75" height="97.5" as="geometry" />
+        </mxCell>
+        <mxCell id="8h4kyF_MyOdSE-Lr8EJv-34" value="Pilih Salah satu Organisasi" style="rhombus;whiteSpace=wrap;html=1;strokeWidth=2;spacingTop=2;spacing=15;" parent="1" vertex="1">
+          <mxGeometry x="910" y="774.5" width="106.87" height="102.5" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" target="uot6lVh3r1S2ukKb5clw-4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="425.0050000000001" y="998" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-2" value="Tampilkan Halaman&amp;nbsp;&lt;i&gt;LOGIN&lt;/i&gt;" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;strokeWidth=2;spacingTop=2;spacing=15;" vertex="1" parent="1">
+          <mxGeometry x="364.995" y="940" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="uot6lVh3r1S2ukKb5clw-4" target="uot6lVh3r1S2ukKb5clw-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-4" value="Masukkan Email dan &lt;i&gt;Password&lt;/i&gt;" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;strokeWidth=2;spacingTop=2;spacing=15;" vertex="1" parent="1">
+          <mxGeometry x="365.005" y="1058" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-11" value="FALSE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="uot6lVh3r1S2ukKb5clw-6" target="uot6lVh3r1S2ukKb5clw-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-14" value="TRUE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="uot6lVh3r1S2ukKb5clw-6" target="uot6lVh3r1S2ukKb5clw-13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-6" value="Apakah email mengandung @ dan password sudah diisi?" style="rhombus;whiteSpace=wrap;html=1;strokeWidth=2;spacingTop=2;spacing=15;" vertex="1" parent="1">
+          <mxGeometry x="358" y="1178" width="134.99" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="uot6lVh3r1S2ukKb5clw-10" target="uot6lVh3r1S2ukKb5clw-17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-10" value="tampilkan &quot;Please Fill out this field&quot;" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;strokeWidth=2;spacingTop=2;spacing=15;" vertex="1" parent="1">
+          <mxGeometry x="562.375" y="1218" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="uot6lVh3r1S2ukKb5clw-13" target="uot6lVh3r1S2ukKb5clw-19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-13" value="Ambil data dari tabel Users" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.database;whiteSpace=wrap;spacingTop=9;" vertex="1" parent="1">
+          <mxGeometry x="378" y="1388" width="95" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="uot6lVh3r1S2ukKb5clw-15" target="uot6lVh3r1S2ukKb5clw-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="425" y="890" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-15" value="LOGIN" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.on-page_reference;spacing=0;spacingBottom=0;spacingTop=-40;" vertex="1" parent="1">
+          <mxGeometry x="230" y="860" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-17" value="LOGIN" style="ellipse;whiteSpace=wrap;html=1;strokeWidth=2;spacingTop=2;spacing=15;" vertex="1" parent="1">
+          <mxGeometry x="596.66" y="1318" width="51.44" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-22" value="TRUE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="uot6lVh3r1S2ukKb5clw-19" target="uot6lVh3r1S2ukKb5clw-21">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-29" value="FALSE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="uot6lVh3r1S2ukKb5clw-19" target="uot6lVh3r1S2ukKb5clw-27">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-19" value="Apakah email dan password sesuai dengan data yang ada di database?" style="rhombus;whiteSpace=wrap;html=1;strokeWidth=2;spacingTop=9;spacing=15;" vertex="1" parent="1">
+          <mxGeometry x="343.25" y="1538" width="164.5" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-24" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="uot6lVh3r1S2ukKb5clw-21" target="uot6lVh3r1S2ukKb5clw-23">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-21" value="Munculkan Notif Selamat datang &quot;nama user&quot;" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;strokeWidth=2;spacingTop=9;spacing=15;" vertex="1" parent="1">
+          <mxGeometry x="365" y="1758" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-23" value="Tampilkan Halaman Dashboard Utama" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;strokeWidth=2;spacingTop=9;spacing=15;" vertex="1" parent="1">
+          <mxGeometry x="358" y="1878" width="135" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="uot6lVh3r1S2ukKb5clw-27" value="LOGIN" style="ellipse;whiteSpace=wrap;html=1;strokeWidth=2;spacingTop=2;spacing=15;" vertex="1" parent="1">
+          <mxGeometry x="596.66" y="1593" width="51.44" height="50" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
