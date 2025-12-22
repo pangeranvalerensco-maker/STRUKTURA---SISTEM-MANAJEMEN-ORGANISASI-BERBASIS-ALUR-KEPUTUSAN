@@ -31,7 +31,7 @@ function registerUser() {
         console.error("Error:", err);
         // Pastikan showToast sudah dipindah ke auth-init.js agar tidak error di sini
         if (typeof showToast === "function") {
-            showToast("Email tidak boleh sama", "error");
+            showToast("Email sudah terdaftar.", "error");
         } else {
             alert("Kesalahan koneksi server");
         }
