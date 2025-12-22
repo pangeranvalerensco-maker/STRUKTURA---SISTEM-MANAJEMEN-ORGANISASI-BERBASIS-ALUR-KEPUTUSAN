@@ -5,6 +5,7 @@ import com.mypackage.struktura.model.dto.LoginRequest;
 import com.mypackage.struktura.model.dto.PositionUpdate;
 import com.mypackage.struktura.model.dto.MemberNumberUpdate;
 import com.mypackage.struktura.model.entity.User;
+import com.mypackage.struktura.repository.UserRepository;
 import com.mypackage.struktura.service.UserService;
 
 import jakarta.validation.Valid;
@@ -22,9 +23,11 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final UserRepository userRepository;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, UserRepository userRepository) {
         this.userService = userService;
+        this.userRepository = userRepository;
     }
 
     // ================= GET USER BY ID =================
@@ -276,5 +279,15 @@ public class UserController {
             // Ini yang akan mengirim pesan "Password lama salah!" ke frontend
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchUsers(@RequestParam String keyword) {
+        if (keyword.length() < 3) {
+            return ResponseEntity.badRequest().body("Keyword minimal 3 karakter");
+        }
+        // Mencari user yang mengandung keyword di nama ATAU email
+        List<User> users = userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword, keyword);
+        return ResponseEntity.ok(users);
     }
 }

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 @Entity
 @Table(name = "program_kerja")
 @Data
@@ -24,9 +26,11 @@ public class ProgramKerja {
     @Column(length = 1000)
     private String description;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     @NotNull(message = "Tanggal mulai wajib ada")
     private LocalDate startDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     @NotNull(message = "Tanggal berakhir wajib ada")
     private LocalDate endDate;
 

@@ -620,6 +620,12 @@ function handleEditProfile(event) {
     const birthDate = document.getElementById('editBirthDate').value;
     const experienceSummary = document.getElementById('editExperienceSummary').value;
 
+    // 1. Validasi: Cek jika jenis kelamin belum dipilih
+    if (!gender || gender === "") {
+        showNotification("Gagal: Silakan pilih Jenis Kelamin terlebih dahulu!", "error");
+        return; // Berhenti di sini, jangan kirim data ke server
+    }
+
     const messageElement = document.getElementById('editMessage');
     const userId = localStorage.getItem("CURRENT_USER_ID");
 
@@ -734,7 +740,11 @@ function confirmDeleteAccount() {
             .then(async res => {
                 if (res.ok) {
                     showToast("Akun berhasil dihapus. Sampai jumpa!", "success");
-                    setTimeout(() => logout(), 2000);
+                    setTimeout(() => {
+                        localStorage.removeItem('CURRENT_USER_ID');
+                        window.location.hash = '';
+                        location.reload();
+                    }, 3000);
                 } else {
                     const errorMsg = await res.text();
                     showToast("Gagal: " + errorMsg, "error");
@@ -881,7 +891,7 @@ function loadOrgList(user) {
     const rawKeyword = orgCurrentKeyword.toLowerCase();
     const fieldSelect = document.getElementById('orgFilterField');
     const fieldFilter = fieldSelect ? fieldSelect.value : "";
-    const pageSize = 9;
+    const pageSize = 10;
 
     // 2. Ambil elemen tableBody di awal agar bisa menampilkan status "Memuat..."
     const tableBody = document.querySelector("#organizationList tbody");
@@ -1688,7 +1698,7 @@ function handleProkerSubmit(event) {
         .then(async res => {
             if (!res.ok) {
                 // 🛑 Jika server tetap kirim error 400 karena format JSON
-                if (res.status === 400) throw new Error("Gagal menyimpan. Harap perhatikan format tanggal.");
+                if (res.status === 400) throw new Error("Data Wajib Diisi");
                 const errorMsg = await res.text();
                 throw new Error(errorMsg);
             }
@@ -2972,10 +2982,107 @@ function handleCreateOrganization(event) {
 
 function openAssignPimpinanModal(orgId, orgName) {
     currentOrgIdToAssign = orgId;
-    document.getElementById("modalOrgName").innerText = orgName;
-    document.getElementById("assignPimpinanModal").style.display = 'block';
-    document.getElementById("targetUserId").value = '';
-    document.getElementById("assignMessage").innerText = '';
+    const modal = document.getElementById("assignPimpinanModal");
+    modal.style.display = 'block';
+    
+    // Meningkatkan lebar ke 550px dan menambah padding ke 30px
+    modal.innerHTML = `
+        <div style="background: white; width: 550px; margin: 80px auto; padding: 30px; border-radius: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); border-top: 5px solid #3182ce;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h4 style="margin:0; color: #2d3748; font-size: 1.25rem;">Tetapkan Pimpinan Baru</h4>
+                <button onclick="closeAssignPimpinanModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#a0aec0;">&times;</button>
+            </div>
+            <p style="color: #718096; font-size:0.95rem; margin-bottom: 20px;">Organisasi: <b style="color: #2b6cb0;">${orgName}</b></p>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom:8px; font-weight:600; color:#4a5568;">Cari Calon Pimpinan (Nama/Email):</label>
+                <input type="text" id="searchUserAdmin" placeholder="Ketik minimal 3 huruf untuk mencari..." 
+                       oninput="handleLiveSearchUser(this.value)" 
+                       style="width: 100%; padding: 12px; border: 2px solid #edf2f7; border-radius: 10px; font-size: 1rem; outline:none; transition: border-color 0.2s;">
+            </div>
+            
+            <div id="searchResultArea" style="max-height: 250px; overflow-y: auto; margin-top: 5px; border: 1px solid #e2e8f0; border-radius: 10px; display:none; background:#fff;">
+                <ul id="userSuggestions" style="list-style:none; padding:0; margin:0;"></ul>
+            </div>
+
+            <div id="selectedUserPreview" style="display:none; margin-top:20px; padding:15px; background:#f0fff4; border:1px solid #c6f6d5; border-radius:10px; animation: slideDown 0.3s ease;">
+                <p style="margin:0 0 5px 0; font-size:0.8rem; color:#38a169; text-transform:uppercase; font-weight:bold;">User Terpilih:</p>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div id="userInisial" style="width:40px; height:40px; border-radius:50%; background:#38a169; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold;"></div>
+                    <div>
+                        <b id="displaySelectedName" style="color: #2d3748; font-size:1.1rem;"></b><br>
+                        <small id="displaySelectedEmail" style="color: #718096;"></small>
+                    </div>
+                </div>
+                <input type="hidden" id="targetUserId">
+            </div>
+
+            <div style="margin-top: 30px; display:flex; gap:12px;">
+                <button id="btnSubmitAssign" onclick="submitAssignPimpinan()" class="btn-primary" disabled style="flex:2; padding: 12px; font-weight:bold;">✅ Konfirmasi Jabatan</button>
+                <button onclick="closeAssignPimpinanModal()" class="btn-secondary" style="flex:1; padding: 12px;">Batal</button>
+            </div>
+            <p id="assignMessage" style="color:red; margin-top: 15px; font-size:0.9rem; text-align:center;"></p>
+        </div>
+    `;
+}
+
+async function handleLiveSearchUser(keyword) {
+    const resultArea = document.getElementById('searchResultArea');
+    const suggestionList = document.getElementById('userSuggestions');
+    
+    if (keyword.length < 3) {
+        resultArea.style.display = 'none';
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/users/search?keyword=${encodeURIComponent(keyword)}`);
+        
+        // Cek apakah respon sukses (200 OK)
+        if (!res.ok) {
+            const errorMsg = await res.text();
+            console.error("Server Error:", errorMsg);
+            return;
+        }
+
+        const users = await res.json();
+
+        // Pastikan 'users' adalah Array sebelum memproses
+        if (!Array.isArray(users)) {
+            console.error("Format data bukan array:", users);
+            return;
+        }
+
+        suggestionList.innerHTML = '';
+        resultArea.style.display = 'block';
+
+        if (users.length === 0) {
+            suggestionList.innerHTML = '<li style="padding:10px; color:#999;">User tidak ditemukan...</li>';
+            return;
+        }
+
+        users.forEach(u => {
+            suggestionList.innerHTML += `
+                <li onclick="selectUserForAssign(${u.id}, '${u.name}', '${u.email}')" 
+                    style="padding:10px; border-bottom:1px solid #eee; cursor:pointer; transition: 0.2s;">
+                    <div style="font-weight:bold; color:#2d3748;">${u.name}</div>
+                    <div style="font-size:0.8rem; color:#718096;">${u.email}</div>
+                </li>`;
+        });
+    } catch (err) {
+        console.error("Gagal cari user:", err);
+    }
+}
+
+function selectUserForAssign(id, name, email) {
+    document.getElementById('targetUserId').value = id;
+    document.getElementById('displaySelectedName').innerText = name;
+    document.getElementById('displaySelectedEmail').innerText = email;
+    
+    document.getElementById('selectedUserPreview').style.display = 'block';
+    document.getElementById('searchResultArea').style.display = 'none';
+    document.getElementById('searchUserAdmin').value = name;
+    document.getElementById('btnSubmitAssign').disabled = false;
 }
 
 function closeAssignPimpinanModal() {
@@ -3011,14 +3118,16 @@ function submitAssignPimpinan() {
             setTimeout(() => {
                 closeAssignPimpinanModal();
                 const adminMessage = document.getElementById("adminMessage");
+                showToast("Pimpinan berhasil ditetapkan: ${user.name} untuk organisasi ${orgId}.", "success");
                 adminMessage.style.color = "green";
                 adminMessage.innerText = `Pimpinan berhasil ditetapkan: ${user.name} untuk organisasi ${orgId}.`;
                 loadOrganizationList(); // Refresh list
             }, 1500);
         })
         .catch(err => {
+            showToast("User ini sudah menjabat sebagai Pimpinan", "error");
             assignMessageElement.style.color = "red";
-            assignMessageElement.innerText = `[Gagal] ${err.message}`;
+            assignMessageElement.innerText = `User ini sudah menjabat sebagai Pimpinan`;
         });
 }
 
