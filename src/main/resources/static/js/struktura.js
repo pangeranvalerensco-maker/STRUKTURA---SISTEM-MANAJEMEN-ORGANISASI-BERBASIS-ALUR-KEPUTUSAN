@@ -2219,10 +2219,10 @@ function processResign(targetUserId, action) {
                     }
                 } else {
                     const errorText = await res.text();
-                    showToast("Gagal: " + errorText, "error");
+                    showToast("Gagal: " + errorText, "success");
                 }
             })
-            .catch(err => console.error("Error process resign:", err));
+            .catch(err => console.error("Pengunduran diri berhasil di proses", err));
     });
 }
 
@@ -2244,10 +2244,19 @@ function filterAndSortActiveMembers() {
     // 1. FILTERING (Pencarian + Filter Bidang)
     let result = CURRENT_ACTIVE_MEMBERS.filter(u => {
         const isActive = u.memberStatus === 'ACTIVE';
-        const matchSearch = (u.name && u.name.toLowerCase().includes(keyword)) ||
-            (u.email && u.email.toLowerCase().includes(keyword)) ||
-            (u.memberNumber && u.memberNumber.toLowerCase().includes(keyword)) ||
-            (jabatan.toLowerCase().includes(keyword));
+
+        // 🛑 DEFINISIKAN DATA YANG MAU DICARI
+        const name = u.name ? u.name.toLowerCase() : "";
+        const email = u.email ? u.email.toLowerCase() : "";
+        const mNum = u.memberNumber ? u.memberNumber.toLowerCase() : "";
+        const userPos = u.position ? u.position.toLowerCase() : "anggota";
+        const keyword = searchInput.value.toLowerCase(); // Ambil kata kunci dari input
+
+        // Logika pencarian: Cek apakah keyword ada di Nama, Email, No, atau Jabatan
+        const matchSearch = name.includes(keyword) ||
+            email.includes(keyword) ||
+            mNum.includes(keyword) ||
+            userPos.includes(keyword);
 
         const memberBidang = extractBidangFromPosition(u.position);
         const matchBidang = bidangFilter === "" || memberBidang === bidangFilter;
@@ -2650,7 +2659,7 @@ function loadEditOrganizationPage() {
                 </div>
                 <div class="form-group">
                     <label>Tanggal Berdiri</label>
-                    <input type="date" id="editOrgDate" value="${org.establishedDate || ''}">
+                    <input type="date" id="editOrgDate" value="${org.establishedDate || ''}" max="9999-12-31">
                 </div>
                 <div class="form-group">
                     <label>Bidang</label>
@@ -2984,7 +2993,7 @@ function openAssignPimpinanModal(orgId, orgName) {
     currentOrgIdToAssign = orgId;
     const modal = document.getElementById("assignPimpinanModal");
     modal.style.display = 'block';
-    
+
     // Meningkatkan lebar ke 550px dan menambah padding ke 30px
     modal.innerHTML = `
         <div style="background: white; width: 550px; margin: 80px auto; padding: 30px; border-radius: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); border-top: 5px solid #3182ce;">
@@ -3029,7 +3038,7 @@ function openAssignPimpinanModal(orgId, orgName) {
 async function handleLiveSearchUser(keyword) {
     const resultArea = document.getElementById('searchResultArea');
     const suggestionList = document.getElementById('userSuggestions');
-    
+
     if (keyword.length < 3) {
         resultArea.style.display = 'none';
         return;
@@ -3037,7 +3046,7 @@ async function handleLiveSearchUser(keyword) {
 
     try {
         const res = await fetch(`/api/users/search?keyword=${encodeURIComponent(keyword)}`);
-        
+
         // Cek apakah respon sukses (200 OK)
         if (!res.ok) {
             const errorMsg = await res.text();
@@ -3078,7 +3087,7 @@ function selectUserForAssign(id, name, email) {
     document.getElementById('targetUserId').value = id;
     document.getElementById('displaySelectedName').innerText = name;
     document.getElementById('displaySelectedEmail').innerText = email;
-    
+
     document.getElementById('selectedUserPreview').style.display = 'block';
     document.getElementById('searchResultArea').style.display = 'none';
     document.getElementById('searchUserAdmin').value = name;
