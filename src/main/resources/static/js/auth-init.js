@@ -13,12 +13,10 @@ if (isLoggedIn && (currentPath === '/login' || currentPath === '/register')) {
     window.location.replace("/struktura");
 } else if (!isLoggedIn && isTryingProtected) {
     // Jika BELUM login, kita izinkan masuk ke /struktura (sebagai Tamu)
-    // Tapi kita tambahkan penanda di GLOBAL_USER agar struktura.js tahu ini Tamu
     console.log("Akses sebagai Tamu diizinkan");
 }
 
 // --- 2. HEADER & UI LOGIC ---
-
 function updateLogoLink() {
     const logoLink = document.getElementById('main-logo-link');
     if (logoLink) {
@@ -79,7 +77,6 @@ window.addEventListener('click', (event) => {
 });
 
 // --- 3. UTILITIES (Toast, Confirm, Logout) ---
-
 function customConfirm(message, onConfirm) {
     const modalHtml = `
         <div id="customConfirmOverlay" class="confirm-overlay">
@@ -133,7 +130,7 @@ function showToast(message, type = 'success', duration = 3000) {
         setTimeout(() => toastElement.remove(), 500);
     }, duration);
 }
-// Inisialisasi DOM
+
 document.addEventListener('DOMContentLoaded', () => {
     updateLogoLink();
     renderHeaderAuth();

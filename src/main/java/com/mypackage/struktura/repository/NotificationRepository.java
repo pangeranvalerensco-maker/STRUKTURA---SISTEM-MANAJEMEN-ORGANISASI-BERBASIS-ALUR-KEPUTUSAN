@@ -15,7 +15,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     // Hitung jumlah notifikasi yang belum dibaca
     long countByRecipientIdAndIsReadFalse(Long userId);
 
+    // jika akun dihapus, notifikasi miliknya ikut dihapus
     void deleteByRecipient(User recipient);
 
+    // sistem tidak semua mengambil data sekaligus, tapi sesuai permintaan dari frontend (10)
     Page<Notification> findByRecipientId(Long userId, Pageable pageable);
 }

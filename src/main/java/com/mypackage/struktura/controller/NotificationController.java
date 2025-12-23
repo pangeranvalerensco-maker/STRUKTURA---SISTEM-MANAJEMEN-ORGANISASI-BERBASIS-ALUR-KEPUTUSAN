@@ -12,39 +12,40 @@ import java.util.Map;
 @RequestMapping("/api/notifications")
 public class NotificationController {
 
-    private final NotificationService notificationService; // 🛑 Panggil Service, bukan Repository
+    private final NotificationService notificationService;
 
     public NotificationController(NotificationService notificationService) {
         this.notificationService = notificationService;
     }
 
+    // ================= DAPATKAN NOTIFIKASI USER =================
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<Notification>> getUserNotifications(@PathVariable Long userId) {
-        // Logika pengambilan data dipindah ke Service
         return ResponseEntity.ok(notificationService.getUserNotifications(userId));
     }
 
+    // ================= HITUNG JUMLAH NOTIFIKASI YANG BELUM DIHITUNG =================
     @GetMapping("/user/{userId}/unread-count")
     public ResponseEntity<Long> getUnreadCount(@PathVariable Long userId) {
-        // Logika hitung data dipindah ke Service
         return ResponseEntity.ok(notificationService.getUnreadCount(userId));
     }
 
+    // ================= UBAH NOTIFIKASI MENJADI DIBACA (DIJALANKAN SAAT BUKA HALAMAN NOTIFIKASI)
     @PutMapping("/user/{userId}/read-all")
     public ResponseEntity<?> markAllAsRead(@PathVariable Long userId) {
-        // 🛑 Logika for-loop dipindah ke Service
         notificationService.markAllAsRead(userId);
         return ResponseEntity.ok().build();
     }
 
+    // ================= KIRIM NOTIFIKASI KE ADMIN =================
     @PostMapping("/to-admin")
     public ResponseEntity<?> sendToAdmin(@RequestBody Map<String, String> body) {
         String message = body.get("message");
-        // Gunakan service yang sudah ada untuk broadcast ke semua admin
         notificationService.sendNotificationToAllAdmins(message);
         return ResponseEntity.ok(Map.of("message", "Pesan terkirim"));
     }
 
+    // ================= MENGAMBIL NOTIFIKASI PER HALAMAN =================
     @GetMapping("/user/{userId}/paged")
     public ResponseEntity<?> getNotificationsPaged(
             @PathVariable Long userId,

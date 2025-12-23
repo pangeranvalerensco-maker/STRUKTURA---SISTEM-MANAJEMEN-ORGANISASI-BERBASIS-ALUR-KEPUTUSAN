@@ -29,7 +29,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     List<User> findByOrganizationIdAndRole(Long organizationId, Role role);
 
-    // Mencari user berdasarkan nama atau email (Ignore Case = tidak peduli huruf besar/kecil)
     List<User> findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String name, String email);
 
 }

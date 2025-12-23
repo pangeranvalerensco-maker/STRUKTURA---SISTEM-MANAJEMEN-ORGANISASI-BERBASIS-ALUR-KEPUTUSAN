@@ -18,6 +18,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * UserController adalah pintu utama untuk semua permintaan (request) yang berkaitan dengan User.
+ * Controller ini bersifat 'Lean' (Ramping), artinya ia hanya bertugas menerima input dan memberikan respon,
+ * sedangkan logika (business logic) diserahkan kepada UserService.
+ */
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -58,10 +63,10 @@ public class UserController {
     // ================= AJUKAN GABUNG =================
     @PostMapping("/{userId}/join/{organizationId}")
     public ResponseEntity<?> requestJoinOrganization(@PathVariable Long userId, @PathVariable Long organizationId,
-            @RequestBody JoinRequest request) { // 🛑 TERIMA BODY
+            @RequestBody JoinRequest request) { // TERIMA BODY
         try {
-            User user = userService.requestJoinOrganization(userId, organizationId, request.getReason()); // 🛑 KIRIM
-                                                                                                          // REASON
+            User user = userService.requestJoinOrganization(userId, organizationId, request.getReason()); // Kirim Alasan
+                                                                                                          
             return new ResponseEntity<>(user, HttpStatus.OK);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
@@ -145,8 +150,6 @@ public class UserController {
     }
 
     // ================= FITUR WAJIB: SEARCH & SORT ACTIVE MEMBERS =================
-    // Endpoint:
-    // /api/users/organization/{orgId}/active/search?keyword=andi&page=0&size=10&sortBy=name&sortDirection=ASC
     @GetMapping("/organization/{organizationId}/active/search")
     public ResponseEntity<?> searchActiveMembers(
             @PathVariable Long organizationId,
@@ -169,7 +172,6 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
         try {
-            // Asumsikan userDetails kini membawa field baru: name, email, gender, birthDate
             User updatedUser = userService.updateUser(id, userDetails);
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);
         } catch (RuntimeException e) {
@@ -177,7 +179,7 @@ public class UserController {
         }
     }
 
-    // 🛑 METHOD BARU: Update Jabatan Anggota
+    // ================= Update Jabatan Anggota =================
     @PutMapping("/{pimpinanId}/position/{targetUserId}")
     public ResponseEntity<?> updateMemberPosition(@PathVariable Long pimpinanId,
             @PathVariable Long targetUserId,
@@ -190,7 +192,7 @@ public class UserController {
         }
     }
 
-    // 🛑 METHOD BARU: Update Nomor Anggota
+    // ================= Update Nomor Anggota =================
     @PutMapping("/{pimpinanId}/member-number/{targetUserId}")
     public ResponseEntity<?> updateMemberNumber(@PathVariable Long pimpinanId,
             @PathVariable Long targetUserId,
@@ -203,6 +205,7 @@ public class UserController {
         }
     }
 
+    // ================= Cabut Keanggotaan =================
     @PostMapping("/{userId}/revoke")
     public ResponseEntity<?> revokeMembership(
             @PathVariable Long userId,
@@ -215,6 +218,7 @@ public class UserController {
         }
     }
 
+    // ================= Reset Status =================
     @PutMapping("/{userId}/reset-status")
     public ResponseEntity<?> resetStatus(@PathVariable Long userId) {
         try {
@@ -226,12 +230,14 @@ public class UserController {
         }
     }
 
+    // ================= Permintaan Pengunduran Diri =================
     @PostMapping("/{userId}/request-resign")
     public ResponseEntity<?> requestResignation(@PathVariable Long userId, @RequestParam String reason) {
         userService.requestResignation(userId, reason);
         return ResponseEntity.ok().build();
     }
 
+    // ================= PROSES PENGUNDURUAN DIRI =================
     @PutMapping("/{pimpinanId}/process-resign/{targetUserId}")
     public ResponseEntity<?> processResign(
             @PathVariable Long pimpinanId,
@@ -245,7 +251,7 @@ public class UserController {
         }
     }
 
-    // Tambahkan di dalam UserController.java
+    // ================= HAPUS AKUN =================
     @DeleteMapping("/{userId}")
     public ResponseEntity<?> deleteAccount(@PathVariable Long userId) {
         try {
@@ -256,6 +262,7 @@ public class UserController {
         }
     }
 
+    // ================= SERAH TERIMA JABATAN =================
     @PutMapping("/{pimpinanId}/handover/{targetId}")
     public ResponseEntity<?> handoverLeadership(@PathVariable Long pimpinanId, @PathVariable Long targetId) {
         try {
@@ -266,6 +273,7 @@ public class UserController {
         }
     }
 
+    // ================= UBAH PASSWORD =================
     @PutMapping("/{id}/change-password")
     public ResponseEntity<?> changePassword(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         try {
@@ -281,6 +289,7 @@ public class UserController {
         }
     }
 
+    // ================= FITUR SEARCH DIADMIN =================
     @GetMapping("/search")
     public ResponseEntity<?> searchUsers(@RequestParam String keyword) {
         if (keyword.length() < 3) {

@@ -30,14 +30,13 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
-    @Transactional // 🛑 Penting karena memanipulasi tabel Organizations, Users, dan Notification
-                   // sekaligus
-    public Organization createOrganization(Organization organization, Long creatorId) {
+    @Transactional 
+    public Organization createOrganization(Organization organization, Long creatorId) { // Proses pendaftaran organisasi baru ke sistem dan otomatis menetapkan pendaftar sebagai pimpinan.
         // 1. Validasi Keberadaan User
         User creator = userRepository.findById(creatorId)
                 .orElseThrow(() -> new RuntimeException("User tidak ditemukan"));
 
-        // 2. Logika Proteksi: Cek kepemilikan organisasi [Pindahan dari Controller]
+        // 2. Logika Proteksi: Cek kepemilikan organisasi 
         if (creator.getOrganization() != null) {
             throw new RuntimeException("Anda sudah terdaftar di organisasi lain.");
         }
@@ -80,7 +79,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     @Override
     public List<Organization> searchOrganizations(String keyword, int page, int size, String sortBy,
-            String sortDirection) {
+            String sortDirection) { // Fitur pencarian organisasi dengan dukungan kata kunci, pembagian halaman (page), dan pengurutan (sort).  
         Sort.Direction direction = sortDirection.equalsIgnoreCase("DESC") ? Sort.Direction.DESC : Sort.Direction.ASC;
         Sort sort = Sort.by(direction, sortBy);
 
@@ -95,7 +94,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
-    public Organization updateOrganization(Long orgId, Organization updatedData, Long pimpinanId) {
+    public Organization updateOrganization(Long orgId, Organization updatedData, Long pimpinanId) { // Memperbarui data organisasi dengan validasi keamanan pimpinan.
         // 1. Validasi Pimpinan
         User pimpinan = userRepository.findById(pimpinanId)
                 .orElseThrow(() -> new RuntimeException("Pimpinan tidak ditemukan"));
@@ -124,7 +123,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     @Override
     @Transactional
-    public void deleteOrganization(Long orgId, Long adminId) {
+    public void deleteOrganization(Long orgId, Long adminId) { // Menghapus data organisasi secara permanen, hanya bisa dilakukan oleh Admin sistem.
         // 1. Validasi Admin
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("Admin tidak ditemukan"));
@@ -180,7 +179,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     @Override
     @Transactional
-    public Organization fullUpdate(Long id, Long pimpinanId, Organization updatedData) {
+    public Organization fullUpdate(Long id, Long pimpinanId, Organization updatedData) { // Melakukan pembaruan menyeluruh pada semua kolom data organisasi.
         // Gunakan logika update yang sudah ada atau buat baru yang mencakup semua field
         Organization org = getOrganizationById(id);
 
@@ -200,14 +199,14 @@ public class OrganizationServiceImpl implements OrganizationService {
         org.setAddress(updatedData.getAddress());
         org.setExternalLink(updatedData.getExternalLink());
         org.setMembershipRequirement(updatedData.getMembershipRequirement());
-        org.setStatus(updatedData.getStatus()); // Ini yang tadi menyebabkan error 400
+        org.setStatus(updatedData.getStatus()); 
 
         return organizationRepository.save(org);
     }
 
     @Override
     @Transactional
-    public void createDeleteRequest(Long id, Long pimpinanId, String reason) {
+    public void createDeleteRequest(Long id, Long pimpinanId, String reason) { // Mengirimkan permohonan resmi kepada Admin untuk membubarkan/menghapus organisasi disertai alasan yang kuat.
         Organization org = getOrganizationById(id);
         User pimpinan = userRepository.findById(pimpinanId).orElseThrow();
 

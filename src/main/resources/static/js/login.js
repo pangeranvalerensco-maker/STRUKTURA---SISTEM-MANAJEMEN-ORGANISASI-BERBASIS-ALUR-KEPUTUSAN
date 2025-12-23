@@ -8,9 +8,9 @@ function login() {
     const password = document.getElementById("password").value;
     const errorElement = document.getElementById("error");
 
-    errorElement.innerText = ""; // Clear previous error
+    errorElement.innerText = ""; 
 
-    fetch("/api/users/login", { // ⬅️ Pastikan URL ini benar
+    fetch("/api/users/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -20,7 +20,7 @@ function login() {
     })
         .then(async res => {
             if (!res.ok) {
-                // Tangkap pesan error dari ResponseEntity<?> yang kita buat di Controller
+                // Tangkap pesan error dari ResponseEntity<?> dari Controller
                 const errorMessage = await res.text();
                 throw new Error(errorMessage || "Login gagal: Email atau Password salah.");
             }
@@ -36,7 +36,7 @@ function login() {
             if (user.organization) {
                 localStorage.setItem("CURRENT_ORG_ID", user.organization.id);
             } else {
-                // Penting: Pastikan data lama di-clear jika user belum punya organisasi
+                // Pastikan data lama di-clear jika user belum punya organisasi
                 localStorage.removeItem("CURRENT_ORG_ID");
             }
 

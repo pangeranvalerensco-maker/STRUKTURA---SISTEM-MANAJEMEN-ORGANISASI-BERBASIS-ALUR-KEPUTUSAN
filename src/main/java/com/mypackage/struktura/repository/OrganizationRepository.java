@@ -8,9 +8,9 @@ import org.springframework.data.domain.Sort;
 import java.util.List;
 
 public interface OrganizationRepository extends JpaRepository<Organization, Long> {
-    // Kembali ke fungsi pencarian standar Anda
     List<Organization> findByStatusIgnoreCase(String status, Sort sort); 
 
+    // Menggunakan Query Manual (JPQL) untuk fitur pencarian organisasi yang lebih kompleks.
     @Query("SELECT o FROM Organization o WHERE o.status = :status AND (LOWER(o.name) LIKE :keyword OR LOWER(o.description) LIKE :keyword)")
     List<Organization> searchActiveByNameOrDescription(
         @Param("keyword") String keyword, 

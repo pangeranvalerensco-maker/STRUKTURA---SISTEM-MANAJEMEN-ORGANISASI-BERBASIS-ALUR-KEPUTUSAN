@@ -78,18 +78,14 @@ function loadOrganizationList() {
     orgListArea.innerHTML = `<p>Memuat daftar organisasi...</p>`;
     paginationControls.innerHTML = '';
 
-    // 🛑 KITA KEMBALI KE ENDPOINT SEARCH AGAR BACKEND BISA FILTER
     let endpoint = `/api/organizations/search`;
 
-    // 1. BUAT QUERY PARAMETERS (Sesuai kebutuhan backend)
     let queryParams = [];
 
     const encodedKeyword = encodeURIComponent(homeCurrentKeyword);
 
-    // 2. Tambahkan Keyword (Selalu dikirim, agar backend bisa pakai defaultValue="")
     queryParams.push(`keyword=${encodedKeyword}`);
 
-    // 3. Tambahkan Pagination dan Sort (Wajib dikirim untuk Pageable/Sort)
     queryParams.push(`page=${homeCurrentPage}`);
     queryParams.push(`size=10`);
     queryParams.push(`sortBy=${homeCurrentSortBy}`);
@@ -103,11 +99,9 @@ function loadOrganizationList() {
     fetch(endpoint)
         .then(res => {
             if (!res.ok) throw new Error(`Fetch Gagal. Status: ${res.status}.`);
-            // Endpoint GET ALL mengembalikan List<Organization> (bukan Page<T>)
             return res.json();
         })
         .then(organizations => {
-            // 🛑 Data yang diterima adalah ARRAY (List<Organization>), bukan PageData
 
             let htmlContent = `
                 <table class="data-table">
@@ -146,7 +140,6 @@ function loadOrganizationList() {
             htmlContent += `</tbody></table>`;
             orgListArea.innerHTML = htmlContent;
 
-            // Hapus logika pagination, karena data adalah List
             paginationControls.innerHTML = '';
         })
         .catch(err => {

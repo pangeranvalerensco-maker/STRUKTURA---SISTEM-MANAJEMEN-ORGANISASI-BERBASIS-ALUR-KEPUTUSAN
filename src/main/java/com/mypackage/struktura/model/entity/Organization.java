@@ -33,7 +33,7 @@ public class Organization {
 
     @OneToMany
     @JoinColumn(name = "organization_id")
-    @JsonIgnore
+    @JsonIgnore // Mencegah looping data saat mengubah data menjadi JSON (Sangat penting!)
     private List<User> members;
 
     @NotNull(message = "Tanggal berdiri wajib diisi")

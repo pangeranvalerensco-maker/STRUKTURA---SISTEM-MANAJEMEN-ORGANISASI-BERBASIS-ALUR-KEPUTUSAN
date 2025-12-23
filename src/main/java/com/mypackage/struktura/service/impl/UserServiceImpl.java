@@ -30,7 +30,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
-    private final NotificationRepository notificationRepository; // 🛑 Tambahkan ini
+    private final NotificationRepository notificationRepository;
     private final NotificationService notificationService;
     private final PasswordEncoder passwordEncoder;
 
@@ -39,52 +39,48 @@ public class UserServiceImpl implements UserService {
             OrganizationRepository organizationRepository,
             NotificationRepository notificationRepository,
             NotificationService notificationService,
-            PasswordEncoder passwordEncoder) { // 🛑 Masukkan ke sini
+            PasswordEncoder passwordEncoder) { 
         this.userRepository = userRepository;
         this.organizationRepository = organizationRepository;
-        this.notificationRepository = notificationRepository; // 🛑 Inisialisasi
+        this.notificationRepository = notificationRepository;
         this.notificationService = notificationService;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
-    public User getUserById(Long userId) {
+    public User getUserById(Long userId) { // Mengambil informasi profil lengkap seorang pengguna.
         return userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User tidak ditemukan"));
     }
 
     // ================= REGISTER =================
     @Override
-    public User registerUser(User user) {
+    public User registerUser(User user) { // Proses pembuatan akun baru dan enkripsi password sebelum disimpan ke database.
 
-        // 1️⃣ Validasi Email Unik (Penting)
+        // Validasi Email Unik (Penting)
         Optional<User> existingUser = userRepository.findByEmail(user.getEmail());
         if (existingUser.isPresent()) {
             throw new RuntimeException("Email sudah terdaftar.");
         }
 
-        // 2️⃣ Validasi WAJIB & Password Minimal 🛑 FIX VALIDASI PASSWORD MANUAL
+        // Validasi WAJIB & Password Minimal 🛑 FIX VALIDASI PASSWORD MANUAL
         if (user.getPassword() == null || user.getPassword().length() < 6) {
             // FIX: Minimum 6 karakter
             throw new RuntimeException("Password wajib diisi dan minimal 6 karakter.");
         }
 
-        // 3️⃣ DEFAULT SYSTEM VALUE
         user.setRole(Role.ANGGOTA);
-        // KOREKSI: Menggunakan Enum MemberStatus
-        user.setMemberStatus(MemberStatus.NON_MEMBER); // ⬅️ Menggunakan Enum NON_MEMBER
+        user.setMemberStatus(MemberStatus.NON_MEMBER); 
         user.setOrganization(null);
         user.setJoinDate(null);
         user.setMemberNumber(null);
-        // CATATAN: Untuk projekan sederhana, kita abaikan enkripsi password dulu
-        // (sesuai batasan scope)
 
         return userRepository.save(user);
     }
 
     // ================= AJUKAN GABUNG =================
     @Override
-    public User requestJoinOrganization(Long userId, Long organizationId, String reason) {
+    public User requestJoinOrganization(Long userId, Long organizationId, String reason) { // Proses pengajuan diri menjadi anggota ke sebuah organisasi disertai alasan.
         User user = userRepository.findById(userId).orElseThrow();
         Organization org = organizationRepository.findById(organizationId).orElseThrow();
 
@@ -203,8 +199,6 @@ public class UserServiceImpl implements UserService {
     // ================= LIST ACTIVE MEMBERS =================
     @Override
     public List<User> getActiveMembers(Long organizationId) {
-        // 🛑 UBAH INI: Jangan difilter statusnya di database, biarkan Frontend yang
-        // memilahnya.
         return userRepository.findByOrganizationId(organizationId);
     }
 
@@ -219,9 +213,7 @@ public class UserServiceImpl implements UserService {
             return user;
         }
 
-        // 2. Fallback: Cek teks biasa (untuk data lama Anda)
-        if (user.getPassword().equals(rawPassword)) {
-            // Upgrade password otomatis ke BCrypt agar ke depan lebih aman
+        if (user.getPassword().equals(rawPassword)) { // jika password tersimpan belum dalam bentuk sudah di di hash
             user.setPassword(passwordEncoder.encode(rawPassword));
             return userRepository.save(user);
         }
@@ -262,7 +254,7 @@ public class UserServiceImpl implements UserService {
         // 4. Update Status dan Role
         targetUser.setRole(Role.PIMPINAN);
         targetUser.setOrganization(organization);
-        targetUser.setMemberStatus(MemberStatus.ACTIVE); // Pimpinan otomatis ACTIVE
+        targetUser.setMemberStatus(MemberStatus.ACTIVE);
         targetUser.setJoinDate(LocalDate.now());
 
         return userRepository.save(targetUser);
@@ -273,23 +265,17 @@ public class UserServiceImpl implements UserService {
     public Page<User> searchAndSortActiveMembers(Long organizationId, String keyword, int page, int size, String sortBy,
             String sortDirection) {
 
-        // 🛑 Sederhanakan Sort: Hilangkan validasi yang kompleks, biarkan Spring
-        // menangani exception.
-        // Kita gunakan try-catch untuk Sort.Direction agar aman dari casing error.
         Sort.Direction direction;
         try {
-            direction = Sort.Direction.fromString(sortDirection.toUpperCase()); // Pastikan UPPERCASE
+            direction = Sort.Direction.fromString(sortDirection.toUpperCase()); 
         } catch (IllegalArgumentException e) {
-            direction = Sort.Direction.ASC; // Fallback aman
+            direction = Sort.Direction.ASC;
         }
 
-        // 🛑 PERHATIAN: JIKA FIELD 'position' TIDAK ADA DI DATABASE, INI AKAN GAGAL.
-        // Asumsi field yang dikirim frontend (name, email, joinDate, position) sudah
-        // valid.
         Sort sort = Sort.by(direction, sortBy);
         PageRequest pageable = PageRequest.of(page, size, sort);
 
-        // 2. Definisikan Kriteria Pencarian (Specification)
+        // Definisikan Kriteria Pencarian (Specification)
         Specification<User> spec = (root, query, criteriaBuilder) -> {
 
             Predicate finalPredicate = criteriaBuilder.conjunction();
@@ -298,17 +284,10 @@ public class UserServiceImpl implements UserService {
             finalPredicate = criteriaBuilder.and(finalPredicate,
                     criteriaBuilder.equal(root.get("memberStatus"), MemberStatus.ACTIVE));
 
-            // 🛑 PERBAIKAN KRITIS: Menggunakan Eksplisit Join untuk Organisasi
+            // Menggunakan Eksplisit Join untuk Organisasi
             if (organizationId != null) {
-                // Gunakan Path atau Join yang lebih aman
-                // Path<Long> orgIdPath = root.get("organization").get("id"); // Cara lama yang
-                // sering gagal
-
-                // Coba cara yang lebih aman:
                 finalPredicate = criteriaBuilder.and(finalPredicate,
                         criteriaBuilder.equal(root.join("organization").get("id"), organizationId));
-
-                // NOTE: Pastikan di User.java, relasinya bernama 'organization' (sudah benar)
             }
 
             // Kriteria Opsional 3: Keyword Search
@@ -330,7 +309,6 @@ public class UserServiceImpl implements UserService {
     }
 
     // ================= UPDATE USER DETAILS =================
-    // ================= UPDATE USER DETAILS =================
     @Override
     public User updateUser(Long id, User userDetails) {
         User existingUser = userRepository.findById(id)
@@ -347,20 +325,10 @@ public class UserServiceImpl implements UserService {
         // 2. Update field baru/lama
         existingUser.setName(userDetails.getName());
 
-        // 🛑 FIX ENUM DESERIALIZATION DARI FRONTEAND:
-        // Asumsi userDetails.getGender() sudah berisi ENUM (MALE/FEMALE)
-        // Jika frontend mengirim String, Jackson sudah gagal di level ini.
-
         // Cek jika ada nilai Gender baru (Jika userDetails adalah Entity)
         if (userDetails.getGender() != null) {
-            // Jika frontend mengirim String, kita harus konversi string tersebut ke Enum
+            // Jika frontend mengirim String,  harus konversi string tersebut ke Enum
             try {
-                // Konversi string ke enum (misal: "LAKI_LAKI" menjadi MALE)
-                // Karena kita tidak tahu persis string apa yang dikirim frontend:
-
-                // Jika frontend mengirim MALE/FEMALE (String):
-                // existingUser.setGender(Gender.valueOf(userDetails.getGender().name().toUpperCase()));
-
                 // Jika userDetails sudah Entity, maka langsung set:
                 existingUser.setGender(userDetails.getGender());
 
@@ -379,7 +347,7 @@ public class UserServiceImpl implements UserService {
         return userRepository.save(existingUser);
     }
 
-    // 🛑 METHOD BARU: Mengubah Jabatan Anggota
+    // Mengubah Jabatan Anggota
     @Override
     public User updateMemberPosition(Long pimpinanId, Long targetUserId, String newPosition) {
         // 1. Cek Pimpinan
@@ -408,7 +376,7 @@ public class UserServiceImpl implements UserService {
         return userRepository.findById(targetUserId).orElseThrow(); // Ambil ulang data utuh
     }
 
-    // 🛑 METHOD BARU: Menetapkan Nomor Anggota
+    // Menetapkan Nomor Anggota
     @Override
     public User updateMemberNumber(Long pimpinanId, Long targetUserId, String memberNumber) {
         // 1. Cek Pimpinan (Validasi serupa dengan updateMemberPosition)
@@ -432,7 +400,6 @@ public class UserServiceImpl implements UserService {
         }
 
         // 4. Update Nomor Anggota
-        // 🛑 Opsional: Cek duplikasi memberNumber jika diperlukan
         targetUser.setMemberNumber(memberNumber);
         userRepository.save(targetUser);
         return userRepository.findById(targetUserId).orElseThrow(); // Ambil ulang data utuh
@@ -480,7 +447,7 @@ public class UserServiceImpl implements UserService {
 
         // 1. Ubah status user agar muncul di tabel "Permintaan Keluar"
         user.setMemberStatus(MemberStatus.RESIGN_REQUESTED);
-        user.setApplicationReason(reason); // Pinjam field ini untuk menyimpan alasan resign
+        user.setApplicationReason(reason); // ini untuk menyimpan alasan resign
         userRepository.save(user);
 
         // 2. Kirim Notifikasi
@@ -509,7 +476,7 @@ public class UserServiceImpl implements UserService {
 
         Notification notif = new Notification();
         notif.setCreatedAt(LocalDateTime.now());
-        notif.setRecipient(targetUser); // 🛑 Notif dikirim ke anggota tersebut
+        notif.setRecipient(targetUser); // Notif dikirim ke anggota tersebut
 
         if ("APPROVE".equalsIgnoreCase(action)) {
             // Logika jika disetujui: Lepas dari organisasi
@@ -530,28 +497,26 @@ public class UserServiceImpl implements UserService {
             notif.setMessage("Permintaan pengunduran diri Anda DITOLAK. Anda tetap menjadi anggota aktif.");
         }
 
-        notificationRepository.save(notif); // Simpan notifikasi
-        return userRepository.save(targetUser); // Simpan perubahan status user
+        notificationRepository.save(notif);
+        return userRepository.save(targetUser); 
     }
 
-    // Tambahkan anotasi @Transactional agar jika salah satu gagal, semua dibatalkan
+    // anotasi @Transactional agar jika salah satu gagal, semua dibatalkan
     @Transactional
     @Override
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User tidak ditemukan"));
 
-        // 🛑 1. Validasi Keanggotaan
+        // 1. Validasi Keanggotaan
         if (user.getOrganization() != null) {
             throw new RuntimeException("Gagal menghapus: Anda masih terdaftar dalam organisasi.");
         }
 
-        // 🛑 2. Hapus semua notifikasi milik user ini terlebih dahulu
-        // Pastikan Anda sudah menyuntikkan (inject) notificationRepository di
-        // constructor
+        // 2. Hapus semua notifikasi milik user ini terlebih dahulu
         notificationRepository.deleteByRecipient(user);
 
-        // 🛑 3. Hapus User
+        // 3. Hapus User
         userRepository.delete(user);
     }
 

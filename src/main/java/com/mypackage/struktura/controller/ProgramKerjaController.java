@@ -17,7 +17,7 @@ public class ProgramKerjaController {
     @Autowired
     private ProgramKerjaService prokerService;
 
-    // POST: /api/proker/org/1?creatorId=5&picId=10
+    // ================= BUAT PROKER =================
     @PostMapping("/org/{orgId}")
     public ResponseEntity<?> createProker(
             @PathVariable Long orgId,
@@ -32,11 +32,13 @@ public class ProgramKerjaController {
         }
     }
 
+    // ================= DAPATKAN PROKER =================
     @GetMapping("/org/{orgId}")
     public ResponseEntity<?> getProkerByOrg(@PathVariable Long orgId) {
         return ResponseEntity.ok(prokerService.getProkerByOrganization(orgId));
     }
 
+    // ================= SETUJUI PROKER =================
     @PutMapping("/{prokerId}/approve")
     public ResponseEntity<?> approveProker(@PathVariable Long prokerId, @RequestParam Long pimpinanId) {
         try {
@@ -46,19 +48,20 @@ public class ProgramKerjaController {
         }
     }
 
+    // ================= TOLAK PROKER =================
     @PutMapping("/{prokerId}/reject")
     public ResponseEntity<?> rejectProker(
             @PathVariable Long prokerId,
             @RequestParam Long pimpinanId,
-            @RequestParam(required = false) String reason) { // Tambahkan parameter reason
+            @RequestParam(required = false) String reason) {
         try {
-            // Panggil service dengan parameter reason yang baru
             return ResponseEntity.ok(prokerService.rejectProker(prokerId, pimpinanId, reason));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
+    // ================= HAPUS PROKER =================
     @DeleteMapping("/{prokerId}")
     public ResponseEntity<?> deleteProker(@PathVariable Long prokerId, @RequestParam Long pimpinanId) {
         try {
@@ -69,6 +72,7 @@ public class ProgramKerjaController {
         }
     }
 
+    // ================= UPDATE STATUS =================
     @PutMapping("/{prokerId}/status")
     public ResponseEntity<?> updateStatus(
             @PathVariable Long prokerId,
@@ -78,6 +82,7 @@ public class ProgramKerjaController {
         return ResponseEntity.ok(prokerService.updateProkerStatus(prokerId, status, userId));
     }
 
+    // ================= SELESAIKAN PROKER =================
     @PutMapping("/{id}/finish")
     public ResponseEntity<?> finishProker(
             @PathVariable Long id,
@@ -94,6 +99,7 @@ public class ProgramKerjaController {
         }
     }
 
+    // ================= GET PROKER BY ID =================
     @GetMapping("/{id}")
     public ResponseEntity<?> getProkerById(@PathVariable Long id) {
         try {

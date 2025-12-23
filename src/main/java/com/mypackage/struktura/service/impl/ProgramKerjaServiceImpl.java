@@ -22,9 +22,8 @@ public class ProgramKerjaServiceImpl implements ProgramKerjaService {
     private final NotificationRepository notificationRepository;
     private final ProgramKerjaRepository prokerRepository;
     private final OrganizationRepository organizationRepository;
-    private final UserRepository userRepository; // 🛑 TAMBAHKAN INI
+    private final UserRepository userRepository; 
 
-    // 🛑 UPDATE CONSTRUCTOR
     public ProgramKerjaServiceImpl(ProgramKerjaRepository prokerRepository,
             OrganizationRepository organizationRepository,
             UserRepository userRepository, NotificationRepository notificationRepository) {
@@ -35,7 +34,7 @@ public class ProgramKerjaServiceImpl implements ProgramKerjaService {
     }
 
     @Override
-    public ProgramKerja createProker(Long creatorId, Long organizationId, Long picId, ProgramKerja proker) {
+    public ProgramKerja createProker(Long creatorId, Long organizationId, Long picId, ProgramKerja proker) { // Membuat draf pengajuan program kerja baru oleh anggota kepada pimpinan.
         User creator = userRepository.findById(creatorId)
                 .orElseThrow(() -> new RuntimeException("User pembuat tidak ditemukan"));
 
@@ -100,7 +99,7 @@ public class ProgramKerjaServiceImpl implements ProgramKerjaService {
     }
 
     @Override
-    public ProgramKerja approveProker(Long prokerId, Long pimpinanId) {
+    public ProgramKerja approveProker(Long prokerId, Long pimpinanId) { // SETUJUI PROKER
         validatePimpinan(pimpinanId);
 
         ProgramKerja proker = prokerRepository.findById(prokerId)
@@ -127,9 +126,8 @@ public class ProgramKerjaServiceImpl implements ProgramKerjaService {
         return savedProker;
     }
 
-    // 🛑 Fungsi Reject Proker
     @Override
-    public ProgramKerja rejectProker(Long prokerId, Long pimpinanId, String reason) {
+    public ProgramKerja rejectProker(Long prokerId, Long pimpinanId, String reason) { // TOLAK PROKER
         validatePimpinan(pimpinanId);
         ProgramKerja proker = prokerRepository.findById(prokerId).orElseThrow();
         proker.setStatus(ProkerStatus.REJECTED);
@@ -148,8 +146,7 @@ public class ProgramKerjaServiceImpl implements ProgramKerjaService {
         return prokerRepository.save(proker);
     }
 
-    // Method pembantu biar kode gak panjang
-    private void sendNotification(User recipient, String message) {
+    private void sendNotification(User recipient, String message) { // Method pembantu biar kode gak panjang
         Notification notif = new Notification();
         notif.setRecipient(recipient);
         notif.setMessage(message);
@@ -157,15 +154,14 @@ public class ProgramKerjaServiceImpl implements ProgramKerjaService {
         notif.setRead(false);
         notificationRepository.save(notif);
     }
-
-    // 🛑 Fungsi Delete Proker (Hak Pimpinan)
+    
     @Override
-    public void deleteProker(Long prokerId, Long pimpinanId) {
+    public void deleteProker(Long prokerId, Long pimpinanId) { // Fungsi Delete Proker (Hak Pimpinan)
         validatePimpinan(pimpinanId);
         ProgramKerja proker = prokerRepository.findById(prokerId)
                 .orElseThrow(() -> new RuntimeException("Proker tidak ditemukan"));
 
-        // 🛑 PROTEKSI: Proker yang sudah selesai tidak boleh dihapus untuk audit
+        // PROTEKSI: Proker yang sudah selesai tidak boleh dihapus untuk audit
         if (proker.getStatus() == ProkerStatus.COMPLETED) {
             throw new RuntimeException("Proker yang sudah selesai tidak dapat dihapus.");
         }
@@ -173,7 +169,7 @@ public class ProgramKerjaServiceImpl implements ProgramKerjaService {
         prokerRepository.deleteById(prokerId);
     }
 
-    public void validatePimpinan(Long pimpinanId) {
+    public void validatePimpinan(Long pimpinanId) { // memastikan user benar-benar memiliki wewenang sebagai pimpinan sebelum mengeksekusi aksi tertentu.
         User user = userRepository.findById(pimpinanId).orElseThrow();
         if (user.getRole() != Role.PIMPINAN) {
             throw new RuntimeException("Hanya Pimpinan yang memiliki hak akses ini.");
@@ -181,7 +177,7 @@ public class ProgramKerjaServiceImpl implements ProgramKerjaService {
     }
 
     @Override
-    public ProgramKerja updateProkerStatus(Long prokerId, ProkerStatus status, Long userId) {
+    public ProgramKerja updateProkerStatus(Long prokerId, ProkerStatus status, Long userId) { // Mengubah status kegiatan secara dinamis (misal: dari "Direncanakan" ke "Berlangsung").
         ProgramKerja proker = prokerRepository.findById(prokerId)
                 .orElseThrow(() -> new RuntimeException("Proker tidak ditemukan"));
 
@@ -196,7 +192,7 @@ public class ProgramKerjaServiceImpl implements ProgramKerjaService {
         proker.setStatus(status);
         ProgramKerja saved = prokerRepository.save(proker);
 
-        // 📣 Kirim Notif ke Pengaju jika status menjadi Berlangsung
+        // Kirim Notif ke Pengaju jika status menjadi Berlangsung
         if (status == ProkerStatus.ON_GOING && proker.getCreatedBy() != null) {
             // Pastikan tidak mengirim ke diri sendiri jika Pengaju adalah PIC-nya
             if (!proker.getCreatedBy().getId().equals(proker.getPic().getId())) {
@@ -222,7 +218,6 @@ public class ProgramKerjaServiceImpl implements ProgramKerjaService {
         }
 
         // 2. Update data proker
-        // Di dalam finishProker ProgramKerjaServiceImpl.java
         proker.setStatus(ProkerStatus.COMPLETED);
         proker.setExecutionReport(executionReport);
         proker.setEvidenceLink(evidenceLink);
@@ -252,7 +247,7 @@ public class ProgramKerjaServiceImpl implements ProgramKerjaService {
     }
 
     @Override
-    public ProgramKerja getProkerById(Long id) {
+    public ProgramKerja getProkerById(Long id) { // Melihat detail lengkap satu program kerja tertentu.
         return prokerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proker tidak ditemukan"));
     }

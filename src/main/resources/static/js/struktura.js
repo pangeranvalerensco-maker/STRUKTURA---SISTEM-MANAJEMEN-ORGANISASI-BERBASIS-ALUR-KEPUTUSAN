@@ -14,11 +14,11 @@ let orgCurrentSortBy = 'name';
 let orgCurrentSortDirection = 'ASC';
 
 const userId = localStorage.getItem("CURRENT_USER_ID");
-let GLOBAL_USER = {}; // 🛑 VARIABEL GLOBAL USER LENGKAP
+let GLOBAL_USER = {}; //  VARIABEL GLOBAL USER LENGKAP
 let CURRENT_ORG_MEMBERS = [];
 let CURRENT_ACTIVE_MEMBERS = []; // Variabel global baru untuk menampung data anggota
 
-// Tambahkan variabel global di bagian atas dashboard.js
+// variabel global di bagian atas dashboard.js
 let LAST_PAGE_BEFORE_PROFILE = 'dashboard';
 
 let currentOrgIdToAssign = null; // Variabel global untuk Modal
@@ -60,13 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const grid = document.getElementById('dashboardGrid');
         if (grid) grid.style.gridTemplateColumns = '1fr'; // Tampilan Full Width
 
-        // Pastikan sidebar disembunyikan agar konten tidak menyempit
         const sideInfo = document.getElementById('side-info-area');
         if (sideInfo) sideInfo.style.display = 'none';
 
         loadOrganizationListDashboard(null, GLOBAL_USER);
         renderFooter();
-        return; // 🛑 WAJIB: Agar tidak lanjut ke fetch userId yang bernilai null
+        return; 
     }
 
     // 1. Ambil data user lengkap
@@ -76,13 +75,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return res.json();
         })
         .then(user => {
-            GLOBAL_USER = user; // 🛑 SIMPAN DATA LENGKAP DI GLOBAL
+            GLOBAL_USER = user; //  SIMPAN DATA LENGKAP DI GLOBAL
             renderSidebar(user);
 
             // Simpan status dan email yang benar ke localStorage
             localStorage.setItem("CURRENT_USER_STATUS", user.memberStatus);
             localStorage.setItem("CURRENT_USER_NAME", user.name);
-            localStorage.setItem("CURRENT_USER_EMAIL", user.email); // 🛑 FIX: Email tersimpan!
+            localStorage.setItem("CURRENT_USER_EMAIL", user.email); //  FIX: Email tersimpan!
 
             renderSidebar(user); // Render sidebar dengan data user
             // LOGIKA REFRESH: Cek hash di URL
@@ -96,21 +95,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadProfilePage(null);
             } else if (currentHash === '#proker' && user.memberStatus === 'ACTIVE') {
                 loadProkerPage(null);
-            } else if (currentHash === '#notifications') { // 🛑 TAMBAHKAN INI
+            } else if (currentHash === '#notifications') { 
                 loadNotificationPage();
             } else if (currentHash === '#orgList' || currentHash === '#org-list') {
                 loadOrgListPage(null, user);
             } else if (currentHash === '#kelola-org' && user.role === 'PIMPINAN' && user.organization) {
-                // 🛑 Tambahkan ini agar refresh di halaman Kelola Org berhasil
                 loadEditOrganizationPage();
             } else if (currentHash === '#kelola' && user.role === 'PIMPINAN' && user.organization) {
                 loadPimpinanDashboard(user);
             } else if (currentHash.startsWith('#organization-')) {
-                // 🛑 FIX: Tambahkan penanganan untuk Profil Organisasi saat refresh
                 const orgId = currentHash.split('-')[1];
                 loadOrganizationProfile(orgId);
             } else if (currentHash.startsWith('#user-')) {
-                // 🛑 SOLUSI: Tambahkan ini agar saat refresh profil anggota tetap di tempat
                 const targetUserId = currentHash.split('-')[1];
                 loadUserProfile(targetUserId, null);
             } else if (currentHash === '#create-org') {
@@ -121,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     loadDefaultLanding(null, GLOBAL_USER);
                 }
             } else if (currentHash === '#handover') {
-                // Hanya izinkan handover jika role-nya PIMPINAN
                 if (user.role === 'PIMPINAN' && user.organization) {
                     loadHandoverPage();
                 } else {
@@ -193,7 +188,7 @@ function renderSectionByHash() {
     const hash = window.location.hash.replace('#', '') || 'dashboard';
     const isGuest = !localStorage.getItem("CURRENT_USER_ID");
 
-    // 🛑 PROTEKSI: Daftar halaman yang dilarang untuk tamu
+    //  PROTEKSI: Daftar halaman yang dilarang untuk tamu
     const restricted = ['proker', 'kelola', 'notifications', 'handover', 'create-org', 'kelola-org'];
     if (isGuest && restricted.includes(hash)) {
         window.location.hash = '#orgList';
@@ -255,7 +250,7 @@ window.onpopstate = function (event) {
 // Fungsi kembali cerdas
 function goBackFromProfile() {
     const mainContainer = document.querySelector('.container');
-    // 🛑 KUNCI: Pastikan grid dashboard selalu dibuat ulang sebelum konten dimuat
+    //  KUNCI: Pastikan grid dashboard selalu dibuat ulang sebelum konten dimuat
     mainContainer.innerHTML = `
         <div class="dashboard-grid" id="dashboardGrid">
             <div class="main-content" id="main-content-area"></div>
@@ -263,7 +258,7 @@ function goBackFromProfile() {
         </div>
     `;
 
-    // 🛑 LOGIKA DINAMIS BERDASARKAN LAST_PAGE_BEFORE_PROFILE
+    //  LOGIKA DINAMIS BERDASARKAN LAST_PAGE_BEFORE_PROFILE
     if (LAST_PAGE_BEFORE_PROFILE === 'kelola') {
         history.pushState({ section: 'kelola' }, "", "#kelola");
         loadPimpinanDashboard(GLOBAL_USER);
@@ -399,27 +394,6 @@ function preventDefault(event) {
     }
 }
 
-// function showToast(message, type = 'success', duration = 3000) {
-//     let container = document.getElementById('toastContainer');
-//     if (!container) {
-//         container = document.createElement('div');
-//         container.id = 'toastContainer';
-//         container.className = 'toast-container';
-//         document.body.appendChild(container);
-//     }
-
-//     const toastElement = document.createElement('div');
-//     toastElement.className = `toast toast-${type}`;
-//     toastElement.textContent = message;
-
-//     container.appendChild(toastElement);
-//     setTimeout(() => toastElement.classList.add('show'), 10);
-//     setTimeout(() => {
-//         toastElement.classList.remove('show');
-//         setTimeout(() => toastElement.remove(), 500);
-//     }, duration);
-// }
-
 // Fungsi utilitas untuk mengubah YYYY-MM-DD menjadi format Indonesia
 function formatIndoDate(dateString) {
     if (!dateString || dateString === 'N/A' || dateString === '-') return '-';
@@ -520,7 +494,7 @@ function loadProfilePage(event) {
     const hasOrg = user.organization !== null;
     let dangerZoneAction = '';
 
-    // 🛑 LOGIKA TOMBOL DINAMIS
+    //  LOGIKA TOMBOL DINAMIS
     let deleteBtnAttr = hasOrg ? 'disabled title="Keluar organisasi dahulu sebelum hapus akun" style="opacity:0.5; cursor:not-allowed;"' : 'onclick="confirmDeleteAccount()"';
     let resignBtn = hasOrg ? `<button onclick="openResignModal()" class="btn-danger-outline">Mengundurkan Diri</button>` : '';
 
@@ -664,7 +638,7 @@ function handleEditProfile(event) {
         .catch(err => {
             messageElement.style.color = "red";
 
-            // 🛑 Logika filter pesan error agar rapi (User Friendly)
+            //  Logika filter pesan error agar rapi (User Friendly)
             if (err.message.includes("Data truncation") || err.message.includes("too long")) {
                 messageElement.innerText = "⚠️ Gagal menyimpan: Teks Ringkasan Pengalaman terlalu panjang! (Maksimal 255 karakter).";
             } else {
@@ -735,7 +709,7 @@ function submitChangePassword() {
 function confirmDeleteAccount() {
     customConfirm("⚠️ PERINGATAN: Menghapus akun akan menghilangkan seluruh data Anda secara permanen. Lanjutkan?", () => {
         fetch(`/api/users/${GLOBAL_USER.id}`, {
-            method: 'DELETE' // 🛑 Ini akan cocok dengan @DeleteMapping di Java
+            method: 'DELETE' 
         })
             .then(async res => {
                 if (res.ok) {
@@ -789,7 +763,7 @@ function submitResignation() {
             if (res.ok) {
                 showToast("Pengajuan terkirim. Menunggu persetujuan pimpinan.", "success");
                 document.getElementById('resignModal').remove();
-                location.reload(); // Refresh untuk update status UI
+                location.reload();
             }
         })
         .catch(err => showToast(err.message, "error"));
@@ -801,7 +775,7 @@ function resetToNonMember(userId) {
         .then(updatedUser => {
             GLOBAL_USER = updatedUser;
             showToast("Status berhasil diperbarui. Silakan pilih organisasi baru.", "success");
-            loadOrgListPage(null, GLOBAL_USER); // Arahkan ke daftar organisasi
+            loadOrgListPage(null, GLOBAL_USER);
         })
         .catch(err => showToast(err.message, "error"));
 }
@@ -816,7 +790,6 @@ function loadOrgListPage(event, user) {
     preventDefault(event);
     updatePageTitle("Daftar Organisasi");
 
-    // 🛑 FIX: Catat asal halaman agar tombol "Kembali" di profil tidak nyasar
     LAST_PAGE_BEFORE_PROFILE = 'org-list';
 
     history.pushState({ section: 'orgList' }, "Daftar Organisasi", "#org-list");
@@ -824,7 +797,6 @@ function loadOrgListPage(event, user) {
 }
 
 
-// 🛑 Tambahkan kata 'async' di depan function
 async function loadOrganizationListDashboard(event, user) {
     if (event) preventDefault(event);
     const container = document.getElementById('main-content-area');
@@ -1114,7 +1086,7 @@ function filterAndSortOrgMembers() {
         result.sort((a, b) => b.name.localeCompare(a.name));
     }
     else if (sortVal === 'no-anggota') {
-        // 🛑 LOGIKA: Taruh yang kosong di paling bawah
+        //  LOGIKA: Taruh yang kosong di paling bawah
         result.sort((a, b) => {
             const noA = a.memberNumber;
             const noB = b.memberNumber;
@@ -1207,7 +1179,7 @@ function closeJoinModal() {
     if (modal) modal.remove();
 }
 
-// 🛑 FUNGSI BARU: Mengirim Pengajuan Gabung dengan Alasan
+//  FUNGSI BARU: Mengirim Pengajuan Gabung dengan Alasan
 function handleJoinSubmit(event) {
     event.preventDefault();
     const organizationId = document.getElementById('modalOrgId').value;
@@ -1372,7 +1344,7 @@ function loadProkerPage(event) {
         return;
     }
 
-    // 🛑 PERBAIKAN: Ambil data anggota dulu agar bidangOptions tidak kosong
+    //  PERBAIKAN: Ambil data anggota dulu agar bidangOptions tidak kosong
     fetch(`/api/users/organization/${orgId}/active`)
         .then(res => res.json())
         .then(members => {
@@ -1381,7 +1353,7 @@ function loadProkerPage(event) {
             const userPos = (GLOBAL_USER.position || "").toLowerCase();
             const canAdd = GLOBAL_USER.role === 'PIMPINAN' || userPos.includes("ketua") || userPos.includes("koordinator") || userPos.includes("kepala") || userPos.includes("kabid");
 
-            // 🛑 Logika filter bidang Anda
+            //  Logika filter bidang Anda
             const bidangOptions = Array.from(new Set(
                 CURRENT_ORG_MEMBERS.map(m => extractBidangFromPosition(m.position))
             )).map(b => `<option value="${b}">${b}</option>`).join('');
@@ -1578,11 +1550,11 @@ function renderProkerList(prokers) {
 function updateProkerStats(stats) {
     const map = {
         'statTotal': stats.TOTAL,
-        'statPending': stats.PENDING,     // Baru
+        'statPending': stats.PENDING,     
         'statPlanned': stats.PLANNED,
         'statOngoing': stats.ON_GOING,
         'statCompleted': stats.COMPLETED,
-        'statRejected': stats.REJECTED    // Baru
+        'statRejected': stats.REJECTED    
     };
 
     for (const [id, value] of Object.entries(map)) {
@@ -1662,7 +1634,7 @@ function handleProkerSubmit(event) {
     const startDate = document.getElementById('prokerStart').value;
     const endDate = document.getElementById('prokerEnd').value;
 
-    // 🛑 VALIDASI TAHUN: Cek jika tahun lebih dari 4 digit
+    //  VALIDASI TAHUN: Cek jika tahun lebih dari 4 digit
     const startYear = new Date(startDate).getFullYear();
     const endYear = new Date(endDate).getFullYear();
 
@@ -1697,7 +1669,7 @@ function handleProkerSubmit(event) {
     })
         .then(async res => {
             if (!res.ok) {
-                // 🛑 Jika server tetap kirim error 400 karena format JSON
+                //  Jika server tetap kirim error 400 karena format JSON
                 if (res.status === 400) throw new Error("Data Wajib Diisi");
                 const errorMsg = await res.text();
                 throw new Error(errorMsg);
@@ -1961,7 +1933,7 @@ function loadPimpinanDashboard(user) {
 
     localStorage.setItem("CURRENT_ORG_ID", orgId);
 
-    // 🛑 1. Ambil data dulu
+    //  1. Ambil data dulu
     fetch(`/api/users/organization/${orgId}/active`)
         .then(res => res.json())
         .then(members => {
@@ -1976,7 +1948,7 @@ function loadPimpinanDashboard(user) {
                 members.map(m => extractBidangFromPosition(m.position))
             )).map(b => `<option value="${b}">${b}</option>`).join('');
 
-            // 🛑 2. Pasang HTML ke Container
+            //  2. Pasang HTML ke Container
             container.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3>Manajemen Anggota: ${user.organization.name}</h3>
@@ -2052,7 +2024,7 @@ function loadPimpinanDashboard(user) {
                 </div>
             `;
 
-            // 🛑 3. BARU PASANG LISTENER (Setelah element keywordSearch dipastikan ada)
+            //  3. BARU PASANG LISTENER (Setelah element keywordSearch dipastikan ada)
             const searchInput = document.getElementById('keywordSearch');
             if (searchInput) {
                 searchInput.addEventListener('input', filterAndSortActiveMembers);
@@ -2061,7 +2033,7 @@ function loadPimpinanDashboard(user) {
                 });
             }
 
-            // 🛑 4. Jalankan pengisian tabel data lainnya
+            //  4. Jalankan pengisian tabel data lainnya
             loadPending(orgId);
             loadResignRequests(orgId);
             currentPage = 0;
@@ -2069,7 +2041,7 @@ function loadPimpinanDashboard(user) {
         })
         .catch(err => {
             console.error("Gagal memuat dashboard:", err);
-            // Tambahkan ini agar pesan error tidak menutupi dashboard jika hanya masalah render
+            // ini agar pesan error tidak menutupi dashboard jika hanya masalah render
             if (!err.message.includes('null')) {
                 container.innerHTML = `<p class="text-error">Error: ${err.message}</p>`;
             }
@@ -2087,7 +2059,7 @@ function loadPending(orgId) {
             tableBody.innerHTML = '';
 
             if (users.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="4">Tidak ada permintaan Bergabung</td></tr>`; // 🛑 Ganti colspan menjadi 4
+                tableBody.innerHTML = `<tr><td colspan="4">Tidak ada permintaan Bergabung</td></tr>`; //  Ganti colspan menjadi 4
                 return;
             }
             users.forEach(u => {
@@ -2105,14 +2077,12 @@ function loadPending(orgId) {
             });
         })
         .catch(err => {
-            document.querySelector("#pendingTable tbody").innerHTML = `<tr><td colspan="4" style="color: red;">${err.message}</td></tr>`; // 🛑 Ganti colspan menjadi 4
+            document.querySelector("#pendingTable tbody").innerHTML = `<tr><td colspan="4" style="color: red;">${err.message}</td></tr>`; //  Ganti colspan menjadi 4
         });
 }
 
 function approve(targetUserId) {
     const approverId = localStorage.getItem("CURRENT_USER_ID");
-
-    // 🛑 HAPUS bagian pimpinanMessage.innerText karena ID tersebut sudah tidak ada di HTML baru
 
     fetch(`/api/users/${approverId}/approve/${targetUserId}`, { method: "PUT" })
         .then(async res => {
@@ -2120,7 +2090,6 @@ function approve(targetUserId) {
                 const text = await res.text();
                 throw new Error(text || "Gagal Approve.");
             }
-            // 🛑 Gunakan Toast agar lebih bersih
             showToast("Anggota berhasil disetujui!", "success");
 
             // Muat ulang dashboard tanpa refresh halaman penuh
@@ -2151,13 +2120,13 @@ function reject(targetUserId) {
 
 
 function loadResignRequests(orgId) {
-    // 🛑 GUNAKAN endpoint general (tanpa /active) agar status RESIGN_REQUESTED ikut terbawa
+    //  GUNAKAN endpoint general (tanpa /active) agar status RESIGN_REQUESTED ikut terbawa
     fetch(`/api/users/organization/${orgId}`)
         .then(res => res.json())
         .then(members => {
             const tableBody = document.querySelector("#resignRequestTable tbody");
 
-            // 🛑 Ambil data user yang statusnya RESIGN_REQUESTED
+            //  Ambil data user yang statusnya RESIGN_REQUESTED
             const requests = members.filter(m => m.memberStatus === 'RESIGN_REQUESTED');
 
             tableBody.innerHTML = '';
@@ -2187,7 +2156,7 @@ function loadResignRequests(orgId) {
         .catch(err => console.error("Gagal memuat permintaan resign:", err));
 }
 
-// 🛑 Fungsi Aksi Tombol (Pastikan ini ada di dashboard.js)
+//  Fungsi Aksi Tombol (Pastikan ini ada di dashboard.js)
 function processResign(targetUserId, action) {
     const approverId = GLOBAL_USER.id;
     const actionText = action === 'APPROVE' ? "MENYETUJUI" : "MENOLAK";
@@ -2230,7 +2199,7 @@ function processResign(targetUserId, action) {
 function filterAndSortActiveMembers() {
     const searchInput = document.getElementById('keywordSearch');
     const sortSelect = document.getElementById('activeSort');
-    const bidangSelect = document.getElementById('activeBidangFilter'); // Tambahan
+    const bidangSelect = document.getElementById('activeBidangFilter'); 
     const tableBody = document.querySelector("#activeTable tbody");
     const paginationArea = document.getElementById('paginationControls');
 
@@ -2245,7 +2214,7 @@ function filterAndSortActiveMembers() {
     let result = CURRENT_ACTIVE_MEMBERS.filter(u => {
         const isActive = u.memberStatus === 'ACTIVE';
 
-        // 🛑 DEFINISIKAN DATA YANG MAU DICARI
+        //  DEFINISIKAN DATA YANG MAU DICARI
         const name = u.name ? u.name.toLowerCase() : "";
         const email = u.email ? u.email.toLowerCase() : "";
         const mNum = u.memberNumber ? u.memberNumber.toLowerCase() : "";
@@ -2732,7 +2701,7 @@ function handleFullOrgUpdate(event) {
         status: "ACTIVE"
     };
 
-    // 🛑 Ganti ke 'PUT' atau 'PATCH' sesuai yang Anda definisikan di Controller Java
+    //  Ganti ke 'PUT' atau 'PATCH' sesuai yang Anda definisikan di Controller Java
     fetch(`/api/organizations/${orgId}?pimpinanId=${pimpinanId}`, {
         method: 'PUT', // Jika masih error 405, ganti menjadi 'PATCH'
         headers: { 'Content-Type': 'application/json' },
@@ -2790,7 +2759,7 @@ function submitDeleteRequest() {
         .then(async res => {
             const data = await res.json();
             if (res.ok) {
-                // 🛑 GANTI HANYA DENGAN PESAN INI
+                //  GANTI HANYA DENGAN PESAN INI
                 showToast("Permintaan penghapusan berhasil dikirim ke Admin.", "success");
                 document.getElementById('deleteOrgModal').remove();
 
@@ -2836,7 +2805,7 @@ function loadActive(orgId) {
                 return;
             }
 
-            users.forEach((u, index) => { // Gunakan index dari forEach
+            users.forEach((u, index) => { 
                 const rowNumber = startIndex + index + 1;
                 const isMe = GLOBAL_USER.id != u.id;
                 let handoverBtn = (!isMe) ? `<button onclick="confirmHandover(${u.id}, '${u.name}')" class="btn-warning btn-small">Tunjuk Pimpinan</button>` : '';
@@ -2911,7 +2880,6 @@ function loadAdminDashboard(user) {
         </div>
     `;
 
-    // document.getElementById('createOrgForm').addEventListener('submit', handleCreateOrganization);
     loadOrganizationList();
 }
 
@@ -2994,7 +2962,6 @@ function openAssignPimpinanModal(orgId, orgName) {
     const modal = document.getElementById("assignPimpinanModal");
     modal.style.display = 'block';
 
-    // Meningkatkan lebar ke 550px dan menambah padding ke 30px
     modal.innerHTML = `
         <div style="background: white; width: 550px; margin: 80px auto; padding: 30px; border-radius: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); border-top: 5px solid #3182ce;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -3149,7 +3116,7 @@ function confirmDeleteOrg(orgId, orgName) {
                     showToast("Organisasi berhasil dihapus.", "success");
                     loadOrganizationList(); // Refresh tabel
                 } else {
-                    // 🛑 PERBAIKAN: Ambil hanya teks message-nya saja agar rapi
+                    //  PERBAIKAN: Ambil hanya teks message-nya saja agar rapi
                     const errorMsg = responseData.message || "Terjadi kesalahan sistem";
                     showToast(errorMsg, "error");
                 }
@@ -3175,7 +3142,7 @@ function loadAboutPage() {
     if (!container) return;
     history.pushState({ section: 'about' }, "Tentang Kami", "#about");
 
-    // 🛑 Pastikan sidebar muncul dan layout grid normal 75/25
+    //  Pastikan sidebar muncul dan layout grid normal 75/25
     if (sideInfo) sideInfo.style.display = 'block';
     if (dashboardGrid) dashboardGrid.style.gridTemplateColumns = '1fr 300px';
 

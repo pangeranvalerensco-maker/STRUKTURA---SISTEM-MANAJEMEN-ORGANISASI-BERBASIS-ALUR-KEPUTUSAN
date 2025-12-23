@@ -7,7 +7,7 @@ function registerUser() {
         name: name,
         email: email,
         password: password,
-        role: "ANGGOTA",            // 🛑 Ubah dari "USER" ke "ANGGOTA"
+        role: "ANGGOTA",            
         memberStatus: "NON_MEMBER" 
     };
 
@@ -29,7 +29,6 @@ function registerUser() {
     })
     .catch(err => {
         console.error("Error:", err);
-        // Pastikan showToast sudah dipindah ke auth-init.js agar tidak error di sini
         if (typeof showToast === "function") {
             showToast("Email sudah terdaftar.", "error");
         } else {
@@ -38,7 +37,6 @@ function registerUser() {
     });
 }
 
-// Pastikan event listener terpasang jika form disubmit
 const regForm = document.getElementById('registerForm');
 if (regForm) {
     regForm.onsubmit = function(e) {

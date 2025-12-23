@@ -28,7 +28,6 @@ public class OrganizationController {
     @PostMapping
     public ResponseEntity<?> createOrganization(@Valid @RequestBody Organization org, @RequestParam Long creatorId) {
         try {
-            // Semua logika proteksi dan notifikasi sudah dipindah ke Service
             Organization savedOrg = organizationService.createOrganization(org, creatorId);
             return ResponseEntity.ok(savedOrg);
         } catch (RuntimeException e) {
@@ -82,6 +81,7 @@ public class OrganizationController {
         }
     }
 
+    // ================= GET DETAIL ORGANISASI =================
     @GetMapping("/{id}/details")
     public ResponseEntity<?> getOrgDetails(@PathVariable Long id) {
         try {
@@ -101,10 +101,8 @@ public class OrganizationController {
     public ResponseEntity<?> updateOrganization(
             @PathVariable Long id,
             @RequestParam Long pimpinanId,
-            @RequestBody Organization updatedData) { // Langsung pakai Entity
+            @RequestBody Organization updatedData) { 
         try {
-            // Karena di Entity status @NotBlank,
-            // kita paksa set di sini jika frontend lupa kirim
             if (updatedData.getStatus() == null || updatedData.getStatus().isEmpty()) {
                 updatedData.setStatus("ACTIVE");
             }
@@ -112,20 +110,19 @@ public class OrganizationController {
             Organization org = organizationService.fullUpdate(id, pimpinanId, updatedData);
             return ResponseEntity.ok(org);
         } catch (Exception e) {
-            // Kirim error dalam format JSON agar terbaca di struktura.js line 2667
             return ResponseEntity.badRequest().body(Map.of("status", e.getMessage()));
         }
     }
 
+    // ================= PERMINTAAN HAPUS ORGANISASI =================
     @PostMapping("/{id}/request-delete")
     public ResponseEntity<?> requestDelete(
             @PathVariable Long id,
             @RequestParam Long pimpinanId,
-            @RequestBody Map<String, String> payload) { // Menggunakan Map agar fleksibel
+            @RequestBody Map<String, String> payload) { 
 
         String reason = payload.get("reason");
         try {
-            // Panggil service yang sudah Anda buat
             organizationService.createDeleteRequest(id, pimpinanId, reason);
             return ResponseEntity.ok(Map.of("message", "Permintaan penghapusan berhasil dikirim ke Admin."));
         } catch (Exception e) {
@@ -133,6 +130,7 @@ public class OrganizationController {
         }
     }
 
+    // ================= HAPUS ORGANISASI =================
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteOrganization(@PathVariable Long id, @RequestParam Long adminId) {
         try {

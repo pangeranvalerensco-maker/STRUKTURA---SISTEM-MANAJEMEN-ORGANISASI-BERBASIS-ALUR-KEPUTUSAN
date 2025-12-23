@@ -6,6 +6,4 @@ import java.util.List;
 
 public interface ProgramKerjaRepository extends JpaRepository<ProgramKerja, Long> {
     List<ProgramKerja> findByOrganizationId(Long organizationId);
-
-    
 }

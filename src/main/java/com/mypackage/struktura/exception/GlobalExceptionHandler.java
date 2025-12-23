@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
-@RestControllerAdvice
+@RestControllerAdvice // Setiap kali ada error di Controller, akan cek ini dulu agar format pesan error-nya rapi (JSON) dan mudah dibaca oleh JavaScript.
 public class GlobalExceptionHandler {
 
     // Menangkap error validasi (@NotBlank, @Size, @Email, dsb)
@@ -21,11 +21,11 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 
-    // Menangkap error logic (throw new RuntimeException)
+    // Menangkap error logic umum (throw new RuntimeException) Contoh: "Email sudah terdaftar"
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeExceptions(RuntimeException ex) {
         Map<String, String> error = new HashMap<>();
-        error.put("message", ex.getMessage());
+        error.put("message", ex.getMessage()); // Mengambil pesan error manual dari kodingan Java
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 }

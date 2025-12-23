@@ -27,8 +27,9 @@ public class NotificationServiceImpl implements NotificationService {
         this.userRepository = userRepository;
     }
 
+    // Mengirimkan pesan pemberitahuan kepada seluruh pengguna yang memiliki peran ADMIN. Biasanya digunakan untuk laporan bantuan atau pengajuan organisasi baru.
     @Override
-    @Transactional // 🛑 Tambahkan Transactional agar proses looping aman
+    @Transactional 
     public void sendNotificationToAllAdmins(String message) {
         List<User> admins = userRepository.findByRole(Role.ADMIN);
 
@@ -43,15 +44,13 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public List<Notification> getUserNotifications(Long userId) {
-        // Logika pengambilan data dipusatkan di sini
+    public List<Notification> getUserNotifications(Long userId) { // Mengambil daftar seluruh notifikasi yang ditujukan untuk satu user tertentu.
         return notificationRepository.findByRecipientIdOrderByCreatedAtDesc(userId);
     }
 
     @Override
-    @Transactional // 🛑 Penting untuk operasi update massal
-    public void markAllAsRead(Long userId) {
-        // Logika bisnis looping dipindah dari Controller ke sini
+    @Transactional 
+    public void markAllAsRead(Long userId) { // Mengubah status semua notifikasi seorang user menjadi "sudah dibaca" agar angka pemberitahuan (badge) hilang.
         List<Notification> notifs = notificationRepository.findByRecipientIdOrderByCreatedAtDesc(userId);
 
         if (!notifs.isEmpty()) {
@@ -61,13 +60,12 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public long getUnreadCount(Long userId) {
-        // Logika perhitungan data
+    public long getUnreadCount(Long userId) { // Menghitung berapa banyak notifikasi yang belum diklik atau dibaca oleh user.
         return notificationRepository.countByRecipientIdAndIsReadFalse(userId);
     }
 
     @Override
-    public Page<Notification> getUserNotificationsPaged(Long userId, int page, int size) {
+    public Page<Notification> getUserNotificationsPaged(Long userId, int page, int size) { // Mengambil data notifikasi secara bertahap (per halaman) agar aplikasi tidak berat saat data sudah banyak.
         PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return notificationRepository.findByRecipientId(userId, pageable);
     }
