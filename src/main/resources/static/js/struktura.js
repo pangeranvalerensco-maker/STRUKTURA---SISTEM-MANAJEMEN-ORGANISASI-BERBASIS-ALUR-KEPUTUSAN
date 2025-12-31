@@ -1973,7 +1973,8 @@ function loadPimpinanDashboard(user) {
                     resignRequests.map(u => `
                                 <tr>
                                     <td><b>${u.name}</b><br><small>${u.position || 'Anggota'}</small></td>
-                                    <td>${u.email}</td> <td><i>"${u.applicationReason || '-'}"</i></td>
+                                    <td>${u.email}</td> 
+                                    <td><i>"${u.applicationReason || '-'}"</i></td>
                                     <td>
                                         <button onclick="processResign(${u.id}, 'APPROVE')" class="btn-danger btn-small">Setujui</button>
                                         <button onclick="processResign(${u.id}, 'REJECT')" class="btn-secondary btn-small">Tolak</button>
