@@ -1,23 +1,26 @@
-# Gunakan Java 17
-FROM eclipse-temurin:17-jdk
-
-# Install utility dos2unix untuk memperbaiki format file
-RUN apt-get update && apt-get install -y dos2unix
-
-# Set working directory
+# Tahap 1: Build (Pembangunan)
+FROM eclipse-temurin:17-jdk AS build
 WORKDIR /app
 
-# Copy semua file project
+# Install dos2unix untuk jaga-jaga format file
+RUN apt-get update && apt-get install -y dos2unix
+
 COPY . .
 
-# PERBAIKAN: Paksa konversi file mvnw ke format Linux & beri izin eksekusi
+# Pastikan mvnw dalam format Linux dan bisa dieksekusi
 RUN dos2unix mvnw && chmod +x mvnw
 
-# Build aplikasi (Melewati tes untuk mempercepat build)
+# Jalankan build untuk menghasilkan file .jar di dalam container
 RUN ./mvnw clean package -DskipTests
 
-# Expose port (Railway akan menggunakan port 8080 secara default)
+# Tahap 2: Runtime (Menjalankan aplikasi)
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+
+# Salin file .jar yang sudah jadi dari tahap build ke tahap runtime
+COPY --from=build /app/target/*.jar app.jar
+
 EXPOSE 8080
 
-# PERBAIKAN: Gunakan Shell Entrypoint agar tanda bintang (*) pada .jar terbaca
-ENTRYPOINT ["sh", "-c", "java -jar target/*.jar"]
+# Jalankan aplikasi
+ENTRYPOINT ["java", "-jar", "app.jar"]
