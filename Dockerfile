@@ -16,4 +16,5 @@ RUN ./mvnw clean package -DskipTests
 EXPOSE 8080
 
 # Jalankan Spring Boot
-CMD ["java", "-jar", "target/*.jar"]
+# Jalankan Spring Boot dengan shell agar wildcard (*) berfungsi
+ENTRYPOINT ["sh", "-c", "java -jar target/*.jar"]
